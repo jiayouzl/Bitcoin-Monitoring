@@ -1,0 +1,529 @@
+# Xcode
+#
+# gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
+
+## User settings
+xcuserdata/
+
+## compatibility with Xcode 8 and earlier (ignoring not required starting Xcode 9)
+*.xcscmblueprint
+*.xccheckout
+
+## compatibility with Xcode 3 and earlier (ignoring not required starting Xcode 4)
+build/
+DerivedData/
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+
+## Obj-C/Swift specific
+*.hmap
+
+## App packaging
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+## Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# Swift Package Manager
+#
+# Add this line if you want to avoid checking in source code from Swift Package Manager dependencies.
+# Packages/
+# Package.pins
+# Package.resolved
+# *.xcodeproj
+#
+# Xcode automatically generates this directory with a .xcworkspacedata file and xcuserdata
+# hence it is not needed unless you have added a package configuration file to your project
+.swiftpm/
+
+.build/
+
+# CocoaPods
+#
+# We recommend against adding the Pods directory to your .gitignore. However
+# you should judge for yourself, the pros and cons are mentioned at:
+# https://guides.cocoapods.org/using/using-cocoapods.html#should-i-check-the-pods-directory-into-source-control
+#
+# Pods/
+#
+# Add this line if you want to avoid checking in source code from the Xcode workspace
+# *.xcworkspace
+
+# Carthage
+#
+# Add this line if you want to avoid checking in source code from Carthage dependencies.
+# Carthage/Checkouts
+
+Carthage/Build/
+
+# Accio dependency management
+Dependencies/
+.accio/
+
+# fastlane
+#
+# It is recommended to not store the screenshots in the git repo. Instead, use fastlane
+# to re-generate the screenshots whenever they are needed.
+# For more information about the recommended setup visit:
+# https://docs.fastlane.tools/best-practices/source-control/
+
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Code Injection
+#
+# After new code Injection tools there's a generated folder /iOSInjectionProject
+# https://github.com/johnno1962/injectionforxcode
+
+iOSInjectionProject/
+
+# macOS
+#
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Xcode Patch
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/project.xcworkspace/
+*.xcodeproj/project.xcworkspace/*
+!*.xcodeproj/project.xcworkspace/contents.xcworkspacedata
+!*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Bundle artifacts
+*.xcarchive
+
+# CocoaPods artifacts
+Pods/
+
+# Carthage artifacts
+Carthage/Build/
+
+# AppCode specific files
+.idea/
+
+# VSCode specific files
+.vscode/
+*.code-workspace
+
+# Temporary files
+*~
+.tmp/
+*.tmp
+*.swp
+*.swo
+
+# Log files
+*.log
+
+# Local configuration files
+.env
+.env.local
+.env.*.local
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Generated files
+*.generated.swift
+*.generated.h
+
+# Documentation build
+docs/build/
+
+# Profiling data
+*.profraw
+*.profdata
+
+# Test artifacts
+*.gcov
+*.gcda
+*.gcno
+
+# Localization
+*.strings.bak
+
+# Asset catalogs generated images
+*.xcassets/*/*_generated/
+
+# Interface Builder files
+*.storyboard.bak
+*.xib.bak
+
+# Core Data models
+*.xcdatamodeld/.xcdatamodel/contents
+
+# Swift Package Manager build artifacts
+.build/
+.swiftpm/xcode/
+
+# SwiftLint
+*.swiftlint.yml
+
+# SwiftFormat
+.swiftformat
+
+# Tuist
+Tuist/Generated/
+Tuist/Derived/
+
+# Xcode Server
+.xcsync
+
+# Bazel
+bazel-*
+WORKSPACE.bak
+BUILD.bak
+
+# Buck
+buck-out/
+\.buckd/
+*.keystore
+!debug.keystore
+
+# Backup files for iOS and macOS projects
+*.mobileprovision
+*.p12
+*.cer
+*.keychain
+
+# Firebase
+google-services.json
+GoogleService-Info.plist
+
+# Localization build outputs
+*.lproj/*.strings.bak
+
+# TestFlight
+TestFlightDistribution/
+
+# App Store Connect
+appstore-connect-metadata/
+
+# Crashlytics
+fabric.properties
+
+# Sentry
+sentry.properties
+
+# New Relic
+newrelic.properties
+
+# Analytics
+analytics.properties
+
+# AdMob
+admob-config.json
+
+# In-app purchases
+receipt-validation-data/
+
+# Auto-generated documentation
+docs/API/
+
+# API keys and secrets
+*.pem
+*.key
+*.crt
+secrets.plist
+APIKeys.plist
+
+# Local development overrides
+Config.local.plist
+Settings.local.plist
+
+# Build outputs
+build/
+dist/
+out/
+
+# Temporary Xcode files
+*.xcscheme.bak
+*.xcconfig.bak
+
+# Simulator data
+*.app.dSYM
+*.app.xcarchive
+
+# Performance testing results
+*.perf
+*.performance
+
+# Memory testing
+*.leaks
+*.heap
+
+# Coverage reports
+coverage/
+*.lcov
+
+# Dependency cache
+Carthage/Checkouts/
+Pods/.local/
+.swift-package-manager
+
+# IDE temp files
+.vscode/
+.fleet/
+.nova/
+
+# macOS app bundles
+*.app/Contents/_CodeSignature/
+*.app/Contents/CodeResources
+*.app/Contents/embedded.provisionprofile
+
+# Sparkle update framework
+Sparkle.framework/
+
+# MAS (Mac App Store) sandboxing
+*.app/Contents/Resources/entitlements.mas.plist
+
+# Development builds
+*-Dev.app
+*-Debug.app
+*-Beta.app
+
+# Archive directories
+archives/
+Archives/
+
+# Distribution certificates
+distribution.cer
+distribution.p12
+
+# Development certificates
+development.cer
+development.p12
+
+# Push notification certificates
+apns.cer
+apns.p12
+apns-key.p12
+
+# Universal Links configuration
+apple-app-site-association
+
+# App Store screenshots
+screenshots/
+marketing-materials/
+
+# Beta testing
+TestFlight/
+Crashlytics/
+
+# Project-specific ignores for BTC Price Monitor
+
+# API response cache
+api-cache/
+price-cache.json
+
+# User preferences and settings
+user-preferences.plist
+settings.json
+
+# Log files specific to price monitoring
+price-fetch.log
+network-errors.log
+debug-log.txt
+
+# Temporary data files
+temp-prices.json
+backup-data.json
+
+# Configuration overrides
+config-dev.plist
+config-local.plist
+config-production.plist.bak
+
+# Development certificates and provisioning profiles (sensitive)
+*.mobileprovision
+*.p12
+*.cer
+*.keychain
+
+# Build artifacts specific to macOS
+*.app.dSYM
+*.app.xcarchive
+Release/
+Debug/
+
+# Xcode derived data (beyond standard)
+DerivedData-*/
+xcuserdata/
+
+# Test data and mock responses
+test-responses/
+mock-api-data.json
+
+# Performance monitoring
+performance-data/
+memory-usage.json
+network-stats.json
+
+# Documentation build artifacts
+docs/build/
+docs/output/
+
+# Local development environment
+.env.local
+.dev.env
+.local.env
+
+# IDE specific files (additional)
+.fleet/
+.nova/
+.cursor/
+
+# Backup and temporary files
+*.backup
+*.bak
+*.tmp
+*~
+.#*
+\#*#
+.*.swp
+.*.swo
+
+# Lock files (keep package-lock.json but ignore others)
+*.lock
+Package.lock
+
+# Dependency manager artifacts
+spm-build/
+swift-package-manager/
+
+# Localization and internationalization
+*.lproj/Localizable.strings.bak
+*.strings.tmp
+
+# Asset generation
+*.xcassets/Assets.car
+*.xcassets/*.imageset/*.png
+
+# Build tools
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+# Code signing and distribution
+distribution/
+build-for-testing/
+app-store-release/
+
+# Development and debugging
+*.xcdebug
+*.xctrace
+*.trace
+
+# Simulator data
+*.app.dSYM/
+*.app.xcarchive/
+
+# Testing
+*.gcov
+*.gcda
+*.gcno
+coverage/
+test-results/
+junit.xml
+
+# Documentation
+docs/_build/
+docs/.doctrees/
+
+# Local configuration
+Config.xcconfig.local
+Settings.xcconfig.local
+
+# Secrets and sensitive data
+secrets/
+api-keys.plist
+credentials.plist
+
+# Temporary network data
+network-cache/
+api-cache.json
+response-cache/
+
+# Application data (for development)
+user-data/
+preferences-dev.plist
+app-state.json
+
+# Backup files for configuration
+config-backup/
+settings-backup/
+
+# Development logs
+debug-logs/
+development-logs/
+error-logs/
+
+# Performance profiling
+*.trace
+*.prof
+*.xcactivitylog
+
+# Build system cache
+build-cache/
+compile-cache/
+linker-cache/
+
+# Version control hooks (keep the hooks themselves)
+.git/hooks/*.sample
+.git/hooks/*.rej
+
+# Local development scripts
+scripts/dev-*
+scripts/local-*
+scripts/temp-*
+
+# Temporary build artifacts
+temp-build/
+build-temp/
+tmp-build/
+
+# Asset processing
+assets/temp/
+assets/cache/
+assets/.DS_Store
