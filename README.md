@@ -9,8 +9,6 @@
 
 一款专业的 macOS 菜单栏应用，用于实时监控 BTC 价格，之前使用Python写过虽然也蛮好用但最终还是决定用macOS原生语言开发，已经编译了`Intel`与`Apple Silicon`的通用应用，请至releases下载。
 
-[功能特性](#功能特性) • [安装要求](#安装要求) • [快速开始](#快速开始) • [使用说明](#使用说明) • [技术架构](#技术架构)
-
 </div>
 
 ## 📖 如在macOS下无法运行，请执行以下步骤：
@@ -60,7 +58,7 @@
 
 ## 🚀 快速开始
 
-### 方式一：直接运行 (推荐)
+### 直接运行
 
 1. **克隆项目**
    ```bash
@@ -76,34 +74,6 @@
 3. **运行应用**
    - 在 Xcode 中选择 "Bitcoin Monitoring" scheme
    - 点击运行按钮或使用 `Cmd+R`
-
-### 方式二：命令行构建
-
-1. **构建项目**
-   ```bash
-   xcodebuild -project "Bitcoin Monitoring.xcodeproj" \
-              -scheme "Bitcoin Monitoring" \
-              -configuration Debug build
-   ```
-
-2. **运行应用**
-   ```bash
-   open "build/Debug/Bitcoin Monitoring.app"
-   ```
-
-### 方式三：发布版本构建
-
-1. **构建发布版本**
-   ```bash
-   xcodebuild -project "Bitcoin Monitoring.xcodeproj" \
-              -scheme "Bitcoin Monitoring" \
-              -configuration Release archive
-   ```
-
-2. **导出应用**
-   - 在 Xcode Organizer 中选择归档
-   - 点击 "Distribute App" 并选择 "Copy App"
-   - 将应用拖到 Applications 文件夹
 
 ## 📖 使用说明
 
@@ -270,168 +240,6 @@ GET https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT
    - 数值范围检查
    - 格式规范化
    - 异常值过滤
-
-## 🛠️ 开发指南
-
-### 添加新功能
-
-#### 1. 添加新的加密货币支持
-
-```swift
-// 在 BTCPriceResponse.swift 中扩展
-struct CryptoPriceResponse: Codable {
-    let symbol: String
-    let price: String
-}
-
-// 在 PriceService.swift 中添加新方法
-func fetchETHPrice() async throws -> Double {
-    // 实现 ETH 价格获取逻辑
-}
-```
-
-#### 2. 添加价格历史功能
-
-```swift
-// 在 PriceManager.swift 中添加
-@Published var priceHistory: [Double] = []
-
-func updatePriceHistory(_ price: Double) {
-    priceHistory.append(price)
-    if priceHistory.count > 100 {
-        priceHistory.removeFirst()
-    }
-}
-```
-
-#### 3. 添加价格警报功能
-
-```swift
-// 在 BTCMenuBarApp.swift 中扩展
-struct PriceAlert {
-    let targetPrice: Double
-    let direction: AlertDirection
-}
-
-enum AlertDirection {
-    case above, below
-}
-```
-
-### 代码规范
-
-#### Swift 命名约定
-```swift
-// 类名：大驼峰命名
-class PriceManager
-
-// 方法名：小驼峰命名
-func fetchPrice()
-
-// 变量名：小驼峰命名
-let currentPrice
-
-// 常量：全大写
-let API_BASE_URL = "https://api.binance.com"
-```
-
-#### 注释规范
-```swift
-/// 价格数据管理器
-///
-/// 负责管理 BTC 价格的获取、缓存和分发。
-/// 使用 Combine 框架提供响应式数据流。
-@MainActor
-class PriceManager: ObservableObject {
-
-    /// 当前 BTC 价格
-    @Published var currentPrice: Double = 0.0
-
-    /// 获取最新价格
-    /// - Throws: PriceError 网络或解析错误
-    func refreshPrice() async {
-        // 实现逻辑
-    }
-}
-```
-
-### 调试技巧
-
-#### 1. 启用详细日志
-```swift
-// 在 PriceService.swift 中添加
-private enum LogLevel {
-    case info, warning, error
-}
-
-private func log(_ message: String, level: LogLevel = .info) {
-    let timestamp = DateFormatter.iso8601.string(from: Date())
-    print("[\(timestamp)] [\(level)] \(message)")
-}
-```
-
-#### 2. 网络请求调试
-```swift
-// 使用 Xcode 网络调试器
-// Product → Scheme → Edit Scheme → Run → Diagnostics
-// 启用 "Network" 选项
-
-// 或者在代码中添加调试信息
-func fetchPrice() async throws -> Double {
-    log("开始获取 BTC 价格", level: .info)
-
-    let startTime = CFAbsoluteTimeGetCurrent()
-    defer {
-        let duration = CFAbsoluteTimeGetCurrent() - startTime
-        log("请求完成，耗时: \(String(format: "%.2f", duration))秒")
-    }
-
-    // 网络请求实现
-}
-```
-
-### 性能优化
-
-#### 1. 定时器优化
-```swift
-// 使用 weak self 避免循环引用
-Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { [weak self] _ in
-    Task { @MainActor in
-        await self?.refreshPrice()
-    }
-}
-```
-
-#### 2. 网络请求优化
-```swift
-// 添加请求缓存
-private var lastFetchTime: Date = Date.distantPast
-private let cacheInterval: TimeInterval = 25.0 // 25秒缓存
-
-func fetchPrice() async throws -> Double {
-    let now = Date()
-    if now.timeIntervalSince(lastFetchTime) < cacheInterval {
-        return cachedPrice
-    }
-
-    // 执行网络请求
-    lastFetchTime = now
-    return try await performNetworkRequest()
-}
-```
-
-#### 3. UI 更新优化
-```swift
-// 批量 UI 更新
-DispatchQueue.main.async { [weak self] in
-    guard let self = self else { return }
-
-    // 批量更新 UI 元素
-    self.updateMenuBarIcon()
-    self.updateMenuBarTitle()
-    self.updateMenuItems()
-}
-```
 
 ## 🔧 故障排除
 
