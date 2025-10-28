@@ -7,12 +7,12 @@
 ![macOS](https://img.shields.io/badge/macOS-12.4+-blue?style=for-the-badge&logo=apple)
 ![License](https://img.shields.io/badge/License-GPL%20v3-green?style=for-the-badge)
 
-一款专业的 macOS 菜单栏应用，用于实时监控 BTC 价格，之前使用Python写过虽然也蛮好用但最终还是决定用macOS原生语言开发，已经编译了`Intel`与`Apple Silicon`的通用应用，请至releases下载。
+一款 macOS 原生菜单栏应用，用于实时监控 `BTC` 价格，之前使用Python写过虽然也蛮好用但最终还是决定用macOS原生语言开发，已经编译了`Intel`与`Apple Silicon`的通用应用，请至`releases`下载。
 
 </div>
 
 ## 📖 如在macOS下无法运行，请执行以下步骤：
-> 系统设置 → 隐私与安全性 → 安全性 → 已阻止“Bitcoin Monitoring。app”以保护Mac → 仍要打开
+> 系统设置 → 隐私与安全性 → 安全性 → 已阻止“Bitcoin Monitoring.app”以保护Mac → 仍要打开
 
 ## 📷︎ 界面预览
 
@@ -62,8 +62,8 @@
 
 1. **克隆项目**
    ```bash
-   git clone https://github.com/your-username/btc-price-monitor.git
-   cd btc-price-monitor
+   git clone https://github.com/jiayouzl/Bitcoin-Monitoring.git
+   cd Bitcoin-Monitoring
    ```
 
 2. **在 Xcode 中打开**
@@ -73,7 +73,7 @@
 
 3. **运行应用**
    - 在 Xcode 中选择 "Bitcoin Monitoring" scheme
-   - 点击运行按钮或使用 `Cmd+R`
+   - 点击运行按钮或使用快捷键： `Cmd+R`
 
 ## 📖 使用说明
 
@@ -81,7 +81,7 @@
 
 1. **启动应用**
    - 应用启动后自动在菜单栏显示 BTC 图标
-   - 首次启动会显示 "加载中..." 状态
+   - 首次启动会显示 "加载中...." 状态
 
 2. **查看价格**
    - 菜单栏实时显示当前 BTC 价格
