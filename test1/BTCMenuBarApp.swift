@@ -183,7 +183,7 @@ class BTCMenuBarApp: NSObject, ObservableObject {
     // 显示关于对话框
     @objc private func showAbout() {
         let alert = NSAlert()
-        alert.messageText = "₿ BTC价格监控器"
+        alert.messageText = "BTC价格监控器"
         alert.informativeText = """
         🚀 一个专业的macOS菜单栏应用，用于实时显示BTC价格
 
