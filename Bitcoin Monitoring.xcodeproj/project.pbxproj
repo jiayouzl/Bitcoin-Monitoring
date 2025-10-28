@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		4E9410702EB09F90003658CB /* test1.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = test1.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4E9410702EB09F90003658CB /* Bitcoin Monitoring.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Bitcoin Monitoring.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -40,7 +40,7 @@
 		4E9410712EB09F90003658CB /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				4E9410702EB09F90003658CB /* test1.app */,
+				4E9410702EB09F90003658CB /* Bitcoin Monitoring.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,9 +48,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		4E94106F2EB09F90003658CB /* test1 */ = {
+		4E94106F2EB09F90003658CB /* Bitcoin Monitoring */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 4E94107F2EB09F92003658CB /* Build configuration list for PBXNativeTarget "test1" */;
+			buildConfigurationList = 4E94107F2EB09F92003658CB /* Build configuration list for PBXNativeTarget "Bitcoin Monitoring" */;
 			buildPhases = (
 				4E94106C2EB09F90003658CB /* Sources */,
 				4E94106D2EB09F90003658CB /* Frameworks */,
@@ -63,11 +63,11 @@
 			fileSystemSynchronizedGroups = (
 				4E9410722EB09F90003658CB /* test1 */,
 			);
-			name = test1;
+			name = "Bitcoin Monitoring";
 			packageProductDependencies = (
 			);
 			productName = test1;
-			productReference = 4E9410702EB09F90003658CB /* test1.app */;
+			productReference = 4E9410702EB09F90003658CB /* Bitcoin Monitoring.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -85,7 +85,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 4E94106B2EB09F90003658CB /* Build configuration list for PBXProject "test1" */;
+			buildConfigurationList = 4E94106B2EB09F90003658CB /* Build configuration list for PBXProject "Bitcoin Monitoring" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -99,7 +99,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				4E94106F2EB09F90003658CB /* test1 */,
+				4E94106F2EB09F90003658CB /* Bitcoin Monitoring */,
 			);
 		};
 /* End PBXProject section */
@@ -302,7 +302,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		4E94106B2EB09F90003658CB /* Build configuration list for PBXProject "test1" */ = {
+		4E94106B2EB09F90003658CB /* Build configuration list for PBXProject "Bitcoin Monitoring" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4E94107D2EB09F92003658CB /* Debug */,
@@ -311,7 +311,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		4E94107F2EB09F92003658CB /* Build configuration list for PBXNativeTarget "test1" */ = {
+		4E94107F2EB09F92003658CB /* Build configuration list for PBXNativeTarget "Bitcoin Monitoring" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4E9410802EB09F92003658CB /* Debug */,
