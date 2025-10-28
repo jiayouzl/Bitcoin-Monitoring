@@ -7,25 +7,15 @@
 ![macOS](https://img.shields.io/badge/macOS-12.4+-blue?style=for-the-badge&logo=apple)
 ![License](https://img.shields.io/badge/License-GPL%20v3-green?style=for-the-badge)
 
-一个专业的 macOS 菜单栏应用，用于实时监控 BTC 价格
+一款专业的 macOS 菜单栏应用，用于实时监控 BTC 价格，之前使用Python写过虽然也蛮好用但最终还是决定用macOS原生语言开发，已经编译了`Intel`与`Apple Silicon`的通用应用，请至releases下载。
 
-[功能特性](#功能特性) • [安装要求](#安装要求) • [快速开始](#快速开始) • [使用说明](#使用说明) • [技术架构](#技术架构) • [贡献指南](#贡献指南)
+[功能特性](#功能特性) • [安装要求](#安装要求) • [快速开始](#快速开始) • [使用说明](#使用说明) • [技术架构](#技术架构)
 
 </div>
 
-## 📋 目录
+## 📷︎ 界面预览
 
-- [功能特性](#功能特性)
-- [安装要求](#安装要求)
-- [快速开始](#快速开始)
-- [使用说明](#使用说明)
-- [技术架构](#技术架构)
-- [API 集成](#api-集成)
-- [开发指南](#开发指南)
-- [故障排除](#故障排除)
-- [贡献指南](#贡献指南)
-- [许可证](#许可证)
-- [作者](#作者)
+![](./assets/iShot_2025-10-28_20.27.11.png)
 
 ## ✨ 功能特性
 
@@ -54,7 +44,7 @@
 ### 系统要求
 - **操作系统**: macOS 12.4 或更高版本
 - **推荐版本**: macOS 14.8 或更高版本
-- **架构支持**: Intel 和 Apple Silicon (M1/M2/M3)
+- **架构支持**: Intel 和 Apple Silicon (M1/M2/M3/M4/M5)
 
 ### 开发环境
 - **开发工具**: Xcode 16.2 或更高版本
@@ -63,7 +53,7 @@
 
 ### 网络要求
 - 需要稳定的互联网连接
-- 访问币安 API (api.binance.com) 的网络权限
+- 访问币安 API (`https://api.binance.com`) 的网络权限
 
 ## 🚀 快速开始
 
@@ -397,14 +387,6 @@ func fetchPrice() async throws -> Double {
 }
 ```
 
-#### 3. 内存泄漏检测
-```swift
-// 在关键类中添加反初始化方法
-deinit {
-    print("🗑️ \(Self.self) 已释放")
-}
-```
-
 ### 性能优化
 
 #### 1. 定时器优化
@@ -483,85 +465,6 @@ curl "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
 # 确保允许出站 HTTPS 连接
 ```
 
-#### 3. 菜单栏图标不显示
-
-**问题**: 应用运行但菜单栏无图标
-**解决方案**:
-```swift
-// 检查状态栏创建逻辑
-guard let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength) else {
-    print("❌ 状态栏创建失败")
-    return
-}
-```
-
-#### 4. 内存占用过高
-
-**问题**: 长时间运行后内存增长
-**优化方案**:
-- 检查循环引用
-- 及时释放 Timer 资源
-- 限制价格历史缓存大小
-
-### 日志分析
-
-#### 启用详细日志
-```swift
-// 在 PriceManager.swift 中修改
-func refreshPrice() async {
-    os_log(.info, log: .priceManager, "开始刷新价格")
-
-    do {
-        let price = try await priceService.fetchPrice()
-        os_log(.success, log: .priceManager, "价格获取成功: %.2f", price)
-        currentPrice = price
-    } catch {
-        os_log(.error, log: .priceManager, "价格获取失败: %@", error.localizedDescription)
-        self.lastError = error
-    }
-}
-```
-
-#### 查看系统日志
-```bash
-# 使用 Console.app 查看应用日志
-# 1. 打开 Console.app
-# 2. 搜索 "Bitcoin Monitoring"
-# 3. 查看错误和警告信息
-```
-
-### 性能监控
-
-#### 1. CPU 使用率监控
-```bash
-# 使用 Activity Monitor 监控
-# 或命令行工具
-top -pid <process_id>
-```
-
-#### 2. 内存使用分析
-```swift
-// 添加内存监控
-func reportMemoryUsage() {
-    let info = mach_task_basic_info()
-    var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size)/4
-
-    let kerr: kern_return_t = withUnsafeMutablePointer(to: &info) {
-        $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
-            task_info(mach_task_self_,
-                     task_flavor_t(MACH_TASK_BASIC_INFO),
-                     $0,
-                     &count)
-        }
-    }
-
-    if kerr == KERN_SUCCESS {
-        let memoryUsage = Float(info.resident_size) / 1024.0 / 1024.0
-        print("📊 内存使用: \(String(format: "%.2f", memoryUsage)) MB")
-    }
-}
-```
-
 ## 🤝 贡献指南
 
 我们欢迎所有形式的贡献！请阅读以下指南：
@@ -572,101 +475,10 @@ func reportMemoryUsage() {
 2. **功能建议**: 提出新功能的想法和建议
 3. **代码贡献**: 提交 Pull Request 改进代码
 4. **文档完善**: 改进 README 和代码注释
-5. **测试反馈**: 测试新版本并提供反馈
-
-### 开发流程
-
-1. **Fork 项目**
-   ```bash
-   # 在 GitHub 上 Fork 项目到你的账户
-   ```
-
-2. **克隆开发分支**
-   ```bash
-   git clone https://github.com/your-username/btc-price-monitor.git
-   cd btc-price-monitor
-   ```
-
-3. **创建功能分支**
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-
-4. **开发和测试**
-   ```bash
-   # 进行开发
-   # 确保所有测试通过
-   # 验证功能正常工作
-   ```
-
-5. **提交更改**
-   ```bash
-   git add .
-   git commit -m "feat: 添加新功能描述"
-   ```
-
-6. **推送分支**
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-
-7. **创建 Pull Request**
-   - 在 GitHub 上创建 PR
-   - 详细描述更改内容
-   - 等待代码审查
-
-### 代码审查标准
-
-- **代码质量**: 遵循 Swift 编码规范
-- **测试覆盖**: 新功能需要相应测试
-- **文档更新**: 更新相关文档和注释
-- **性能考虑**: 确保不影响现有性能
-- **向后兼容**: 保持 API 兼容性
-
-### 提交信息规范
-
-使用 [Conventional Commits](https://conventionalcommits.org/) 格式：
-
-```
-<type>[optional scope]: <description>
-
-[optional body]
-
-[optional footer(s)]
-```
-
-**类型说明**:
-- `feat`: 新功能
-- `fix`: Bug 修复
-- `docs`: 文档更新
-- `style`: 代码格式调整
-- `refactor`: 代码重构
-- `test`: 测试相关
-- `chore`: 构建或工具相关
-
-**示例**:
-```
-feat(price): 添加价格历史记录功能
-
-- 实现价格数据本地存储
-- 添加历史记录查看界面
-- 支持数据导出功能
-
-Closes #123
-```
 
 ## 📄 许可证
 
 本项目采用 **GNU General Public License v3.0** 许可证。
-
-### 许可证摘要
-
-- ✅ **商业使用**: 可以用于商业目的
-- ✅ **修改**: 可以修改源代码
-- ✅ **分发**: 可以分发原版或修改版
-- ✅ **专利使用**: 提供明确的专利授权
-- ❌ **责任**: 作者不承担任何责任
-- ❌ **担保**: 不提供任何担保
 
 ### 完整许可证文本
 
@@ -674,11 +486,10 @@ Closes #123
 
 ## 👨‍💻 作者
 
-**张雷**
+**Mark**
 
-- **邮箱**: your-email@example.com
-- **GitHub**: [@your-username](https://github.com/your-username)
-- **项目主页**: [https://github.com/your-username/btc-price-monitor](https://github.com/your-username/btc-price-monitor)
+- **GitHub**: [@jiayouzl](https://github.com/jiayouzl/)
+- **项目主页**: [https://github.com/jiayouzl/Bitcoin-Monitoring](https://github.com/jiayouzl/Bitcoin-Monitoring)
 
 ---
 
