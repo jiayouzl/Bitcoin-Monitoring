@@ -7,7 +7,7 @@
 ![macOS](https://img.shields.io/badge/macOS-12.4+-blue?style=for-the-badge&logo=apple)
 ![License](https://img.shields.io/badge/License-GPL%20v3-green?style=for-the-badge)
 
-一款 macOS 原生菜单栏应用，用于实时监控主流虚拟货币价格，支持 BTC/ETH/BNB/SOL/DOGE 多种币种，之前使用Python写过虽然也蛮好用但最终还是决定用macOS原生语言开发，已经编译了`Intel`与`Apple Silicon`的通用应用，请至`releases`下载。
+一款 macOS 原生菜单栏应用，用于实时监控主流虚拟货币价格，支持 BTC/ETH/BNB/SOL/DOGE 多种币种，之前使用Python写过虽然也蛮好用但最终还是决定用macOS原生语言开发，已经编译了`Intel`与`Apple Silicon`的通用应用，请至[releases](https://github.com/jiayouzl/Bitcoin-Monitoring/releases/latest)下载。
 
 </div>
 
