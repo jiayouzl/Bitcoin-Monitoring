@@ -37,21 +37,61 @@ class AppSettings: ObservableObject {
     /// 从UserDefaults加载保存的配置
     /// 如果没有保存的配置，使用默认值（30秒）
     func loadSettings() {
+        #if DEBUG
+        print("🔧 [AppSettings] 开始加载配置...")
+        #endif
+
+        let hasRefreshIntervalKey = defaults.object(forKey: refreshIntervalKey) != nil
         let savedIntervalValue = defaults.double(forKey: refreshIntervalKey)
-        if let savedInterval = RefreshInterval.allCases.first(where: { $0.rawValue == savedIntervalValue }) {
+        #if DEBUG
+        print("🔧 [AppSettings] 刷新间隔键是否存在: \(hasRefreshIntervalKey)")
+        print("🔧 [AppSettings] 从 UserDefaults 读取刷新间隔: \(savedIntervalValue)")
+        #endif
+
+        if hasRefreshIntervalKey,
+           let savedInterval = RefreshInterval.allCases.first(where: { $0.rawValue == savedIntervalValue }) {
             refreshInterval = savedInterval
+            #if DEBUG
+            print("🔧 [AppSettings] ✅ 使用保存的刷新间隔: \(savedInterval.displayText)")
+            #endif
         } else {
             refreshInterval = .thirtySeconds
+            #if DEBUG
+            print("🔧 [AppSettings] ❌ 未找到有效刷新间隔，使用默认值: \(refreshInterval.displayText)")
+            #endif
             saveRefreshInterval(.thirtySeconds)
         }
 
-        if let savedSymbolRaw = defaults.string(forKey: selectedSymbolKey),
+        let hasSymbolKey = defaults.object(forKey: selectedSymbolKey) != nil
+        let savedSymbolRaw = defaults.string(forKey: selectedSymbolKey)
+
+        #if DEBUG
+        print("🔧 [AppSettings] 币种键是否存在: \(hasSymbolKey)")
+        if let symbol = savedSymbolRaw {
+            print("🔧 [AppSettings] 从 UserDefaults 读取币种: \(symbol)")
+        } else {
+            print("🔧 [AppSettings] 从 UserDefaults 读取币种: nil")
+        }
+        #endif
+
+        if hasSymbolKey,
+           let savedSymbolRaw = savedSymbolRaw,
            let savedSymbol = CryptoSymbol(rawValue: savedSymbolRaw) {
             selectedSymbol = savedSymbol
+            #if DEBUG
+            print("🔧 [AppSettings] ✅ 使用保存的币种: \(savedSymbol.displayName)")
+            #endif
         } else {
             selectedSymbol = .btc
+            #if DEBUG
+            print("🔧 [AppSettings] ❌ 未找到有效币种配置，使用默认值: \(selectedSymbol.displayName)")
+            #endif
             saveSelectedSymbol(.btc)
         }
+
+        #if DEBUG
+        print("🔧 [AppSettings] 配置加载完成 - 刷新间隔: \(refreshInterval.displayText), 币种: \(selectedSymbol.displayName)")
+        #endif
     }
 
     /// 保存用户选择的刷新间隔
@@ -65,6 +105,9 @@ class AppSettings: ObservableObject {
     /// - Parameter symbol: 要保存的币种
     func saveSelectedSymbol(_ symbol: CryptoSymbol) {
         selectedSymbol = symbol
+        #if DEBUG
+        print("🔧 [AppSettings] 保存币种配置: \(symbol.displayName) (\(symbol.rawValue))")
+        #endif
         defaults.set(symbol.rawValue, forKey: selectedSymbolKey)
     }
 }

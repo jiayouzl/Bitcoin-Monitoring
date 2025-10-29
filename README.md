@@ -7,7 +7,7 @@
 ![macOS](https://img.shields.io/badge/macOS-12.4+-blue?style=for-the-badge&logo=apple)
 ![License](https://img.shields.io/badge/License-GPL%20v3-green?style=for-the-badge)
 
-一款 macOS 原生菜单栏应用，用于实时监控 `BTC` 价格，之前使用Python写过虽然也蛮好用但最终还是决定用macOS原生语言开发，已经编译了`Intel`与`Apple Silicon`的通用应用，请至`releases`下载。
+一款 macOS 原生菜单栏应用，用于实时监控主流虚拟货币价格，支持 BTC/ETH/BNB/SOL/DOGE 多种币种，之前使用Python写过虽然也蛮好用但最终还是决定用macOS原生语言开发，已经编译了`Intel`与`Apple Silicon`的通用应用，请至`releases`下载。
 
 </div>
 
@@ -16,12 +16,13 @@
 
 ## 📷︎ 界面预览
 
-![](./assets/iShot_2025-10-29_14.33.17.png)
+![](./assets/pingtu-1761743534819@700×299.jpg)
 
 ## ✨ 功能特性
 
 ### 🚀 核心功能
-- **实时价格显示**: 在菜单栏实时显示 BTC/USDT 价格
+- **多币种支持**: 支持 BTC/ETH/BNB/SOL/DOGE 主流虚拟货币价格监控
+- **实时价格显示**: 在菜单栏实时显示选中币种的 USDT 价格
 - **多种刷新机制**: 可选 5、10、30、60 秒自动获取最新价格数据
 - **智能错误重试**: 网络异常时自动重试，最多 3 次
 - **手动刷新**: 支持快捷键 `Cmd+R` 手动刷新价格
@@ -79,14 +80,18 @@
 ### 基本操作
 
 1. **启动应用**
-   - 应用启动后自动在菜单栏显示 BTC 图标
+   - 应用启动后自动在菜单栏显示默认币种 (BTC) 图标
    - 首次启动会显示 "加载中...." 状态
 
 2. **查看价格**
-   - 菜单栏实时显示当前 BTC 价格
+   - 菜单栏实时显示当前选中币种的 USDT 价格
    - 格式：`$价格` (例如: `$43,250.50`)
 
-3. **交互菜单**
+3. **切换币种**
+   - 点击菜单栏图标 → 币种选择 → 选择想要的币种
+   - 支持 BTC/ETH/BNB/SOL/DOGE 五种主流币种
+
+4. **交互菜单**
    - 点击菜单栏图标显示详细菜单
    - 查看更多信息并执行操作
 
@@ -94,7 +99,8 @@
 
 | 功能 | 描述 | 快捷键 |
 |------|------|--------|
-| 价格信息 | 显示当前 BTC 价格和状态 | - |
+| 价格信息 | 显示当前选中币种的价格和状态 | - |
+| 币种选择 | 切换监控的币种 (BTC/ETH/BNB/SOL/DOGE) | - |
 | 错误信息 | 显示网络错误详情 (如有) | - |
 | 更新时间 | 显示上次成功更新时间 | - |
 | 刷新价格 | 手动获取最新价格 | `Cmd+R` |
@@ -131,46 +137,6 @@ BTC价格监控器架构
     └── BTCPriceResponse.swift (数据模型)
 ```
 
-### 核心组件
-
-#### **test1App.swift**
-- **职责**: 应用程序入口点
-- **功能**:
-  - 配置应用为后台模式
-  - 创建和初始化菜单栏应用
-  - 管理应用生命周期
-
-#### **BTCMenuBarApp.swift**
-- **职责**: 菜单栏界面控制器
-- **功能**:
-  - 管理状态栏图标和文本
-  - 处理用户交互事件
-  - 显示上下文菜单
-  - 更新 UI 状态
-
-#### **PriceManager.swift**
-- **职责**: 价格数据管理器 (@MainActor)
-- **功能**:
-  - 定时刷新机制 (30秒间隔)
-  - 智能重试策略 (最多3次)
-  - Combine 发布者模式
-  - 状态管理和错误处理
-
-#### **PriceService.swift**
-- **职责**: 网络请求服务层
-- **功能**:
-  - 币安 API 集成
-  - HTTP 网络请求处理
-  - JSON 数据解析
-  - 网络错误处理
-
-#### **BTCPriceResponse.swift**
-- **职责**: API 响应数据模型
-- **功能**:
-  - Codable 协议支持
-  - 数据验证和转换
-  - 类型安全的属性访问
-
 ### 设计模式
 
 - **MVVM 架构**: SwiftUI + ObservableObject 模式
@@ -201,15 +167,27 @@ priceManager.$currentPrice
 
 ### 币安 API 端点
 
+应用支持多种币种的价格查询：
+
 ```http
-GET https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT
+GET https://api.binance.com/api/v3/ticker/price?symbol={SYMBOL}
 ```
+
+### 支持的交易对
+
+| 币种 | 交易对符号 | 显示名称 |
+|------|------------|----------|
+| Bitcoin | BTCUSDT | BTC/USDT |
+| Ethereum | ETHUSDT | ETH/USDT |
+| BNB | BNBUSDT | BNB/USDT |
+| Solana | SOLUSDT | SOL/USDT |
+| Dogecoin | DOGEUSDT | DOGE/USDT |
 
 ### 请求参数
 
 | 参数 | 类型 | 必需 | 描述 |
 |------|------|------|------|
-| symbol | String | 是 | 交易对符号 (BTCUSDT) |
+| symbol | String | 是 | 交易对符号 (如: BTCUSDT, ETHUSDT, BNBUSDT, SOLUSDT, DOGEUSDT) |
 
 ### 响应格式
 
@@ -269,7 +247,12 @@ ping api.binance.com
 
 2. 验证 API 可用性
 ```bash
+# 测试不同币种的 API 可用性
 curl "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
+curl "https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT"
+curl "https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT"
+curl "https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT"
+curl "https://api.binance.com/api/v3/ticker/price?symbol=DOGEUSDT"
 ```
 
 3. 检查防火墙设置

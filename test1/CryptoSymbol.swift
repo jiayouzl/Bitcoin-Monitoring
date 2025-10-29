@@ -2,7 +2,7 @@
 //  CryptoSymbol.swift
 //  Bitcoin Monitoring
 //
-//  Created by GitHub Copilot on 2025/10/29.
+//  Created by Mark on 2025/10/29.
 //
 
 import Foundation
@@ -12,6 +12,8 @@ import Foundation
 enum CryptoSymbol: String, CaseIterable, Codable {
     case btc = "BTCUSDT"
     case eth = "ETHUSDT"
+    case bnb = "BNBUSDT"
+    case sol = "SOLUSDT"
     case doge = "DOGEUSDT"
 
     /// 用于展示的币种简称
@@ -21,6 +23,10 @@ enum CryptoSymbol: String, CaseIterable, Codable {
             return "BTC"
         case .eth:
             return "ETH"
+        case .bnb:
+            return "BNB"
+        case .sol:
+            return "SOL"
         case .doge:
             return "DOGE"
         }
@@ -43,6 +49,10 @@ enum CryptoSymbol: String, CaseIterable, Codable {
             return "bitcoinsign.circle.fill"
         case .eth:
             return "hexagon.fill"
+        case .bnb:
+            return "diamond.fill"
+        case .sol:
+            return "circle.hexagongrid.fill"
         case .doge:
             return "pawprint.circle.fill"
         }
