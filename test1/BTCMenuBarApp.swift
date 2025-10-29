@@ -14,11 +14,14 @@ import Combine
 class BTCMenuBarApp: NSObject, ObservableObject {
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
-    private var priceManager = PriceManager()
-    private var appSettings = AppSettings()
+    private let appSettings: AppSettings
+    private let priceManager: PriceManager
     private var cancellables = Set<AnyCancellable>()
 
     override init() {
+        let settings = AppSettings()
+        self.appSettings = settings
+        self.priceManager = PriceManager(initialSymbol: settings.selectedSymbol)
         super.init()
         setupMenuBar()
         setupConfigurationObservers()
@@ -30,6 +33,15 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         appSettings.$refreshInterval
             .sink { [weak self] newInterval in
                 self?.priceManager.updateRefreshInterval(newInterval)
+            }
+            .store(in: &cancellables)
+
+        // 监听币种配置变化
+        appSettings.$selectedSymbol
+            .sink { [weak self] newSymbol in
+                guard let self = self else { return }
+                self.priceManager.updateSymbol(newSymbol)
+                self.updateMenuBarTitle(price: self.priceManager.currentPrice)
             }
             .store(in: &cancellables)
     }
@@ -49,7 +61,7 @@ class BTCMenuBarApp: NSObject, ObservableObject {
             return
         }
 
-        // 设置BTC图标和标题
+        // 设置初始图标和标题
         updateMenuBarTitle(price: 0.0)
         button.action = #selector(menuBarClicked)
         button.target = self
@@ -61,6 +73,15 @@ class BTCMenuBarApp: NSObject, ObservableObject {
                 self?.updateMenuBarTitle(price: price)
             }
             .store(in: &cancellables)
+
+        // 监听币种变化以更新UI
+        priceManager.$selectedSymbol
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+                self.updateMenuBarTitle(price: self.priceManager.currentPrice)
+            }
+            .store(in: &cancellables)
     }
 
     // 更新菜单栏标题
@@ -68,26 +89,46 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         DispatchQueue.main.async {
             guard let button = self.statusItem?.button else { return }
 
-            // 创建BTC图标
-            let btcImage = NSImage(systemSymbolName: "bitcoinsign.circle.fill", accessibilityDescription: "BTC")
-            btcImage?.size = NSSize(width: 16, height: 16)
+            let symbol = self.priceManager.selectedSymbol
+            let symbolImage = self.symbolImage(for: symbol)
+            symbolImage?.size = NSSize(width: 16, height: 16)
 
             // 设置图标
-            button.image = btcImage
+            button.image = symbolImage
 
             // 根据状态设置标题
             if price == 0.0 {
                 if self.priceManager.isFetching {
-                    button.title = " 更新中..."
+                    button.title = " \(symbol.displayName) 更新中..."
                 } else if self.priceManager.lastError != nil {
-                    button.title = " 错误"
+                    button.title = " \(symbol.displayName) 错误"
                 } else {
-                    button.title = " 加载中..."
+                    button.title = " \(symbol.displayName) 加载中..."
                 }
             } else {
-                button.title = String(format: " $%.2f", price)
+                button.title = " \(symbol.displayName) $\(self.formatPriceWithCommas(price))"
             }
         }
+    }
+
+    // 获取币种对应的图标
+    private func symbolImage(for symbol: CryptoSymbol) -> NSImage? {
+        if let image = NSImage(systemSymbolName: symbol.systemImageName, accessibilityDescription: symbol.displayName) {
+            return image
+        }
+        return NSImage(systemSymbolName: "bitcoinsign.circle.fill", accessibilityDescription: "Crypto")
+    }
+
+    // 格式化价格为千分位分隔形式
+    private func formatPriceWithCommas(_ price: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 4
+        formatter.groupingSeparator = ","
+        formatter.usesGroupingSeparator = true
+        
+        return formatter.string(from: NSNumber(value: price)) ?? String(format: "%.4f", price)
     }
 
     // 菜单栏点击事件
@@ -103,11 +144,11 @@ class BTCMenuBarApp: NSObject, ObservableObject {
     private func showMenu(from view: NSView) {
         let menu = NSMenu()
 
-        // 添加价格信息项（带BTC图标）
+        // 添加价格信息项（带币种图标）
         let priceItem = NSMenuItem(title: priceManager.formattedPrice, action: nil, keyEquivalent: "")
-        if let btcImage = NSImage(systemSymbolName: "bitcoinsign.circle.fill", accessibilityDescription: "BTC") {
-            btcImage.size = NSSize(width: 16, height: 16)
-            priceItem.image = btcImage
+        if let symbolImage = symbolImage(for: priceManager.selectedSymbol) {
+            symbolImage.size = NSSize(width: 16, height: 16)
+            priceItem.image = symbolImage
         }
         priceItem.isEnabled = false
         menu.addItem(priceItem)
@@ -132,6 +173,36 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         }
         timeItem.isEnabled = false
         menu.addItem(timeItem)
+
+        menu.addItem(NSMenuItem.separator())
+
+        // 币种选择子菜单
+        let symbolSettingsItem = NSMenuItem(title: "币种选择", action: nil, keyEquivalent: "")
+        if let symbolSettingsImage = NSImage(systemSymbolName: "chart.line.uptrend.xyaxis", accessibilityDescription: "币种选择") {
+            symbolSettingsImage.size = NSSize(width: 16, height: 16)
+            symbolSettingsItem.image = symbolSettingsImage
+        }
+
+        let symbolMenu = NSMenu()
+        let currentSymbol = priceManager.selectedSymbol
+        for symbol in CryptoSymbol.allCases {
+            let isCurrent = (symbol == currentSymbol)
+            let item = NSMenuItem(
+                title: symbol.menuTitle(isCurrent: isCurrent),
+                action: #selector(selectSymbol(_:)),
+                keyEquivalent: ""
+            )
+            item.target = self
+            item.isEnabled = !isCurrent
+            item.representedObject = symbol.rawValue
+            if let icon = symbolImage(for: symbol) {
+                icon.size = NSSize(width: 16, height: 16)
+                item.image = icon
+            }
+            symbolMenu.addItem(item)
+        }
+        symbolSettingsItem.submenu = symbolMenu
+        menu.addItem(symbolSettingsItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -229,6 +300,17 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         }
     }
 
+    // 选择币种
+    @objc private func selectSymbol(_ sender: NSMenuItem) {
+        guard let rawValue = sender.representedObject as? String,
+              let symbol = CryptoSymbol(rawValue: rawValue) else {
+            return
+        }
+
+        appSettings.saveSelectedSymbol(symbol)
+        print("✅ 币种已更新为: \(symbol.pairDisplayName)")
+    }
+
     // 选择刷新间隔
     @objc private func selectRefreshInterval(_ sender: NSMenuItem) {
         guard let interval = sender.representedObject as? RefreshInterval else {
@@ -252,16 +334,7 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         let version = getAppVersion()
         let alert = NSAlert()
         alert.messageText = "BTC价格监控器 v\(version)"
-        alert.informativeText = """
-        🚀 一款 macOS 原生菜单栏应用，用于实时显示BTC价格
-
-        ✨ 功能特性：
-        • 实时显示BTC/USDT价格
-        • 可配置刷新间隔（当前：\(currentInterval.displayText)）
-        • 支持手动刷新 (Cmd+R)
-        • 智能错误重试机制
-        • 优雅的SF Symbols图标
-        """
+        alert.informativeText = "🚀 一款 macOS 原生菜单栏应用，用于实时显示主流币种价格\n✨ 功能特性：\n• 实时显示主流币种/USDT价格（BTC/ETH/DOGE）\n• 可配置刷新间隔（当前：\(currentInterval.displayText)）\n• 支持手动刷新 (Cmd+R)\n• 智能错误重试机制\n• 优雅的SF Symbols图标\n"
         alert.alertStyle = .informational
         alert.addButton(withTitle: "确定")
         alert.runModal()

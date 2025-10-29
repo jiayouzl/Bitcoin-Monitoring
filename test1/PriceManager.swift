@@ -8,18 +8,20 @@
 import Foundation
 import Combine
 
-// 价格管理器，负责定时刷新BTC价格
+// 价格管理器，负责定时刷新币种价格
 @MainActor
 class PriceManager: ObservableObject {
     @Published var currentPrice: Double = 0.0
     @Published var isFetching: Bool = false
     @Published var lastError: PriceError?
+    @Published var selectedSymbol: CryptoSymbol
 
     private let priceService = PriceService()
     private var timer: Timer?
-    private var currentRefreshInterval: TimeInterval = 30.0 // 当前刷新间隔
+    private var currentRefreshInterval: TimeInterval = RefreshInterval.thirtySeconds.rawValue // 当前刷新间隔
 
-    init() {
+    init(initialSymbol: CryptoSymbol = .btc) {
+        selectedSymbol = initialSymbol
         startPriceUpdates()
     }
 
@@ -32,7 +34,7 @@ class PriceManager: ObservableObject {
     // 开始定时更新价格
     func startPriceUpdates() {
         #if DEBUG
-        print("⏰ [BTC Price Manager] 启动定时器，刷新间隔: \(Int(currentRefreshInterval))秒")
+    print("⏰ [Price Manager] 启动定时器，刷新间隔: \(Int(currentRefreshInterval))秒 | 币种: \(selectedSymbol.displayName)")
         #endif
 
         // 立即获取一次价格
@@ -48,7 +50,7 @@ class PriceManager: ObservableObject {
         }
 
         #if DEBUG
-        print("✅ [BTC Price Manager] 定时器启动成功")
+    print("✅ [Price Manager] 定时器启动成功")
         #endif
     }
 
@@ -56,21 +58,21 @@ class PriceManager: ObservableObject {
     @MainActor
     func stopPriceUpdates() {
         #if DEBUG
-        print("⏹️ [BTC Price Manager] 停止定时器")
+    print("⏹️ [Price Manager] 停止定时器")
         #endif
 
         timer?.invalidate()
         timer = nil
 
         #if DEBUG
-        print("✅ [BTC Price Manager] 定时器已停止")
+    print("✅ [Price Manager] 定时器已停止")
         #endif
     }
 
     // 手动刷新价格
     func refreshPrice() async {
         #if DEBUG
-        print("🔄 [BTC Price Manager] 用户手动刷新价格")
+    print("🔄 [Price Manager] 用户手动刷新价格 | 币种: \(selectedSymbol.displayName)")
         #endif
 
         await fetchPrice()
@@ -80,34 +82,59 @@ class PriceManager: ObservableObject {
     private func fetchPrice() async {
         isFetching = true
         lastError = nil
+        let activeSymbol = selectedSymbol
+        var didUpdatePrice = false
 
         #if DEBUG
-        print("🔄 [BTC Price Manager] 开始获取价格...")
+        print("🔄 [Price Manager] 开始获取价格 | 币种: \(activeSymbol.displayName)")
         #endif
+
+        defer {
+            isFetching = false
+
+            #if DEBUG
+            if let error = lastError {
+                print("⚠️ [Price Manager] 价格获取流程结束，最终失败: \(error.localizedDescription) | 币种: \(activeSymbol.displayName)")
+            } else if didUpdatePrice {
+                print("✅ [Price Manager] 价格获取流程结束，成功")
+            } else {
+                print("ℹ️ [Price Manager] 价格获取流程结束，结果已丢弃 | 币种已更新")
+            }
+            #endif
+        }
 
         // 重试最多3次
         let maxRetries = 3
 
         for attempt in 1...maxRetries {
             #if DEBUG
-            print("📡 [BTC Price Manager] 尝试获取价格 (第\(attempt)次)")
+            print("📡 [Price Manager] 尝试获取价格 (第\(attempt)次) | 币种: \(activeSymbol.displayName)")
             #endif
 
             do {
-                let price = try await priceService.fetchBTCPrice()
+                let price = try await priceService.fetchPrice(for: activeSymbol)
+
+                guard activeSymbol == selectedSymbol else {
+                    #if DEBUG
+                    print("ℹ️ [Price Manager] 币种已切换至 \(selectedSymbol.displayName)，丢弃旧结果")
+                    #endif
+                    return
+                }
+
                 currentPrice = price
+                didUpdatePrice = true
 
                 #if DEBUG
                 let formatter = DateFormatter()
                 formatter.timeStyle = .medium
                 let currentTime = formatter.string(from: Date())
-                print("✅ [BTC Price Manager] 价格更新成功: $\(String(format: "%.2f", price)) | 时间: \(currentTime)")
+                print("✅ [Price Manager] 价格更新成功: \(activeSymbol.displayName)/USDT $\(String(format: "%.4f", price)) | 时间: \(currentTime)")
                 #endif
 
                 break // 成功获取价格，退出重试循环
             } catch let error as PriceError {
                 #if DEBUG
-                print("❌ [BTC Price Manager] 价格获取失败 (第\(attempt)次): \(error.localizedDescription)")
+                print("❌ [Price Manager] 价格获取失败 (第\(attempt)次): \(error.localizedDescription) | 币种: \(activeSymbol.displayName)")
                 #endif
 
                 if attempt == maxRetries {
@@ -118,7 +145,7 @@ class PriceManager: ObservableObject {
                 }
             } catch {
                 #if DEBUG
-                print("❌ [BTC Price Manager] 网络错误 (第\(attempt)次): \(error.localizedDescription)")
+                print("❌ [Price Manager] 网络错误 (第\(attempt)次): \(error.localizedDescription) | 币种: \(activeSymbol.displayName)")
                 #endif
 
                 if attempt == maxRetries {
@@ -128,38 +155,58 @@ class PriceManager: ObservableObject {
                 }
             }
         }
-
-        isFetching = false
-
-        #if DEBUG
-        if let error = lastError {
-            print("⚠️ [BTC Price Manager] 价格获取流程结束，最终失败: \(error.localizedDescription)")
-        } else {
-            print("✅ [BTC Price Manager] 价格获取流程结束，成功")
-        }
-        #endif
     }
 
     // 格式化价格显示
     var formattedPrice: String {
         if isFetching {
-            return "BTC: 更新中..."
+            return "\(selectedSymbol.displayName): 更新中..."
         }
 
         if lastError != nil {
-            return "BTC: 错误"
+            return "\(selectedSymbol.displayName): 错误"
         }
 
         if currentPrice == 0.0 {
-            return "BTC: 加载中..."
+            return "\(selectedSymbol.displayName): 加载中..."
         }
 
-        return String(format: "BTC: $%.2f", currentPrice)
+        return "\(selectedSymbol.displayName): $\(formatPriceWithCommas(currentPrice))"
     }
 
     // 获取详细错误信息
     var errorMessage: String? {
         return lastError?.localizedDescription
+    }
+
+    // 格式化价格为千分位分隔形式
+    private func formatPriceWithCommas(_ price: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 4
+        formatter.groupingSeparator = ","
+        formatter.usesGroupingSeparator = true
+        
+        return formatter.string(from: NSNumber(value: price)) ?? String(format: "%.4f", price)
+    }
+
+    /// 更新当前币种
+    /// - Parameter symbol: 用户选中的新币种
+    func updateSymbol(_ symbol: CryptoSymbol) {
+        guard symbol != selectedSymbol else { return }
+
+        #if DEBUG
+        print("🔁 [Price Manager] 更新币种: \(selectedSymbol.displayName) → \(symbol.displayName)")
+        #endif
+
+        selectedSymbol = symbol
+        currentPrice = 0.0
+        lastError = nil
+
+        Task { [weak self] in
+            await self?.fetchPrice()
+        }
     }
 
     // MARK: - Refresh Interval Configuration
@@ -170,7 +217,7 @@ class PriceManager: ObservableObject {
         let oldInterval = RefreshInterval.allCases.first { $0.rawValue == currentRefreshInterval }?.displayText ?? "未知"
 
         #if DEBUG
-        print("⏱️ [BTC Price Manager] 刷新间隔变更: \(oldInterval) → \(interval.displayText)")
+        print("⏱️ [Price Manager] 刷新间隔变更: \(oldInterval) → \(interval.displayText)")
         #endif
 
         currentRefreshInterval = interval.rawValue
@@ -178,7 +225,7 @@ class PriceManager: ObservableObject {
         // 如果定时器正在运行，重启它以应用新的间隔
         if timer != nil {
             #if DEBUG
-            print("🔄 [BTC Price Manager] 重启定时器以应用新的刷新间隔")
+            print("🔄 [Price Manager] 重启定时器以应用新的刷新间隔")
             #endif
 
             stopPriceUpdates()

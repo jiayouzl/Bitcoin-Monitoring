@@ -17,11 +17,14 @@ class AppSettings: ObservableObject {
 
     /// 当前选中的刷新间隔
     @Published var refreshInterval: RefreshInterval = .thirtySeconds
+    /// 当前选中的币种
+    @Published var selectedSymbol: CryptoSymbol = .btc
 
     // MARK: - Private Properties
 
     private let defaults = UserDefaults.standard
     private let refreshIntervalKey = "BTCRefreshInterval"
+    private let selectedSymbolKey = "SelectedCryptoSymbol"
 
     // MARK: - Initialization
 
@@ -34,15 +37,20 @@ class AppSettings: ObservableObject {
     /// 从UserDefaults加载保存的配置
     /// 如果没有保存的配置，使用默认值（30秒）
     func loadSettings() {
-        let savedValue = defaults.double(forKey: refreshIntervalKey)
-
-        // 查找匹配的刷新间隔，如果没有匹配的则使用默认值
-        if let savedInterval = RefreshInterval.allCases.first(where: { $0.rawValue == savedValue }) {
+        let savedIntervalValue = defaults.double(forKey: refreshIntervalKey)
+        if let savedInterval = RefreshInterval.allCases.first(where: { $0.rawValue == savedIntervalValue }) {
             refreshInterval = savedInterval
         } else {
             refreshInterval = .thirtySeconds
-            // 保存默认值，确保下次启动时有正确的配置
             saveRefreshInterval(.thirtySeconds)
+        }
+
+        if let savedSymbolRaw = defaults.string(forKey: selectedSymbolKey),
+           let savedSymbol = CryptoSymbol(rawValue: savedSymbolRaw) {
+            selectedSymbol = savedSymbol
+        } else {
+            selectedSymbol = .btc
+            saveSelectedSymbol(.btc)
         }
     }
 
@@ -51,5 +59,12 @@ class AppSettings: ObservableObject {
     func saveRefreshInterval(_ interval: RefreshInterval) {
         refreshInterval = interval
         defaults.set(interval.rawValue, forKey: refreshIntervalKey)
+    }
+
+    /// 保存用户选择的币种
+    /// - Parameter symbol: 要保存的币种
+    func saveSelectedSymbol(_ symbol: CryptoSymbol) {
+        selectedSymbol = symbol
+        defaults.set(symbol.rawValue, forKey: selectedSymbolKey)
     }
 }
