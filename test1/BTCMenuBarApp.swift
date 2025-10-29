@@ -2,7 +2,7 @@
 //  BTCMenuBarApp.swift
 //  test1
 //
-//  Created by zl_vm on 2025/10/28.
+//  Created by Mark on 2025/10/28.
 //
 
 import SwiftUI
@@ -15,11 +15,23 @@ class BTCMenuBarApp: NSObject, ObservableObject {
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
     private var priceManager = PriceManager()
+    private var appSettings = AppSettings()
     private var cancellables = Set<AnyCancellable>()
 
     override init() {
         super.init()
         setupMenuBar()
+        setupConfigurationObservers()
+    }
+
+    // 设置配置观察者
+    private func setupConfigurationObservers() {
+        // 监听刷新间隔配置变化
+        appSettings.$refreshInterval
+            .sink { [weak self] newInterval in
+                self?.priceManager.updateRefreshInterval(newInterval)
+            }
+            .store(in: &cancellables)
     }
 
     // 设置菜单栏
@@ -134,7 +146,44 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         refreshItem.isEnabled = !priceManager.isFetching
         menu.addItem(refreshItem)
 
+        // 添加刷新设置子菜单
+        let refreshSettingsItem = NSMenuItem(title: "刷新设置", action: nil, keyEquivalent: "")
+        if let settingsImage = NSImage(systemSymbolName: "timer", accessibilityDescription: "刷新设置") {
+            settingsImage.size = NSSize(width: 16, height: 16)
+            refreshSettingsItem.image = settingsImage
+        }
+
+        let refreshSettingsMenu = NSMenu()
+        let currentInterval = priceManager.getCurrentRefreshInterval()
+
+        // 为每个刷新间隔创建菜单项
+        for interval in RefreshInterval.allCases {
+            let isCurrent = (interval == currentInterval)
+            let item = NSMenuItem(
+                title: interval.displayTextWithMark(isCurrent: isCurrent),
+                action: #selector(selectRefreshInterval(_:)),
+                keyEquivalent: ""
+            )
+            item.target = self
+            item.representedObject = interval
+            item.isEnabled = !isCurrent // 当前选中的项不能再次点击
+
+            refreshSettingsMenu.addItem(item)
+        }
+
+        refreshSettingsItem.submenu = refreshSettingsMenu
+        menu.addItem(refreshSettingsItem)
+
         menu.addItem(NSMenuItem.separator())
+
+        // 添加GitHub按钮（带GitHub图标）
+        let checkUpdateItem = NSMenuItem(title: "GitHub", action: #selector(checkForUpdates), keyEquivalent: "")
+        if let updateImage = NSImage(systemSymbolName: "star.circle", accessibilityDescription: "GitHub") {
+            updateImage.size = NSSize(width: 16, height: 16)
+            checkUpdateItem.image = updateImage
+        }
+        checkUpdateItem.target = self
+        menu.addItem(checkUpdateItem)
 
         // 添加关于按钮（带信息图标）
         let aboutItem = NSMenuItem(title: "关于", action: #selector(showAbout), keyEquivalent: "")
@@ -180,29 +229,68 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         }
     }
 
+    // 选择刷新间隔
+    @objc private func selectRefreshInterval(_ sender: NSMenuItem) {
+        guard let interval = sender.representedObject as? RefreshInterval else {
+            return
+        }
+
+        // 保存配置到UserDefaults
+        appSettings.saveRefreshInterval(interval)
+
+        // 立即应用新的刷新间隔
+        priceManager.updateRefreshInterval(interval)
+
+        print("✅ 刷新间隔已更新为: \(interval.displayText)")
+    }
+
     // 显示关于对话框
     @objc private func showAbout() {
+        let currentInterval = priceManager.getCurrentRefreshInterval()
+
+        // 获取应用版本信息
+        let version = getAppVersion()
         let alert = NSAlert()
-        alert.messageText = "BTC价格监控器"
+        alert.messageText = "BTC价格监控器 v\(version)"
         alert.informativeText = """
-        🚀 一个专业的macOS菜单栏应用，用于实时显示BTC价格
+        🚀 一款 macOS 原生菜单栏应用，用于实时显示BTC价格
 
         ✨ 功能特性：
         • 实时显示BTC/USDT价格
-        • 每30秒自动刷新
+        • 可配置刷新间隔（当前：\(currentInterval.displayText)）
         • 支持手动刷新 (Cmd+R)
         • 智能错误重试机制
         • 优雅的SF Symbols图标
-
-        📊 技术信息：
-        数据来源：币安官方API
-        作者：张雷
-        版本：1.0.0
-        架构：SwiftUI + AppKit
         """
         alert.alertStyle = .informational
         alert.addButton(withTitle: "确定")
         alert.runModal()
+    }
+
+    // 打开GitHub页面
+    @objc private func checkForUpdates() {
+        let githubURL = "https://github.com/jiayouzl/Bitcoin-Monitoring"
+
+        // 确保URL有效
+        guard let url = URL(string: githubURL) else {
+            print("❌ 无效的URL: \(githubURL)")
+            return
+        }
+
+        // 使用默认浏览器打开URL
+        NSWorkspace.shared.open(url)
+
+        print("✅ 已在浏览器中打开GitHub页面: \(githubURL)")
+    }
+
+    // 获取应用版本信息
+    /// - Returns: 版本号字符串，格式为 "主版本号.次版本号.修订号"
+    private func getAppVersion() -> String {
+        guard let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String else {
+            return "未知版本"
+        }
+
+        return version
     }
 
     // 退出应用
