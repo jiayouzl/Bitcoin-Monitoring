@@ -7,8 +7,8 @@
 
 import Foundation
 
-// BTC价格响应数据模型
-struct BTCPriceResponse: Codable {
+// 币安Ticker价格响应数据模型
+struct TickerPriceResponse: Codable {
     let symbol: String
     let price: String
 }

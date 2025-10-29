@@ -7,14 +7,14 @@
 
 import Foundation
 
-// 网络服务类，负责从币安API获取BTC价格
+// 网络服务类，负责从币安API获取币种价格
 class PriceService: ObservableObject {
     private let baseURL = "https://api.binance.com/api/v3/ticker/price"
     private let session = URLSession.shared
 
-    // 获取BTC价格
-    func fetchBTCPrice() async throws -> Double {
-        let urlString = "\(baseURL)?symbol=BTCUSDT"
+    // 获取指定币种价格
+    func fetchPrice(for symbol: CryptoSymbol) async throws -> Double {
+        let urlString = "\(baseURL)?symbol=\(symbol.apiSymbol)"
         guard let url = URL(string: urlString) else {
             throw PriceError.invalidURL
         }
@@ -33,7 +33,7 @@ class PriceService: ObservableObject {
 
         // 解析JSON数据
         let decoder = JSONDecoder()
-        let priceResponse = try decoder.decode(BTCPriceResponse.self, from: data)
+        let priceResponse = try decoder.decode(TickerPriceResponse.self, from: data)
 
         // 转换价格为Double类型
         guard let price = Double(priceResponse.price) else {
