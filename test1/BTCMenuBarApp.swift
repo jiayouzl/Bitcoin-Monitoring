@@ -334,7 +334,16 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         let version = getAppVersion()
         let alert = NSAlert()
         alert.messageText = "BTC价格监控器 v\(version)"
-        alert.informativeText = "🚀 一款 macOS 原生菜单栏应用，用于实时显示主流币种价格\n✨ 功能特性：\n• 实时显示主流币种/USDT价格（BTC/ETH/DOGE）\n• 可配置刷新间隔（当前：\(currentInterval.displayText)）\n• 支持手动刷新 (Cmd+R)\n• 智能错误重试机制\n• 优雅的SF Symbols图标\n"
+        alert.informativeText = """
+        🚀 一款 macOS 原生菜单栏应用，用于实时显示主流币种价格
+        
+        ✨ 功能特性：
+        • 实时显示主流币种/USDT价格（BTC/ETH/BNB/SOL/DOGE）
+        • 可配置刷新间隔（当前：\(currentInterval.displayText)）
+        • 支持手动刷新 (Cmd+R)
+        • 智能错误重试机制
+        • 优雅的SF Symbols图标
+        """
         alert.alertStyle = .informational
         alert.addButton(withTitle: "确定")
         alert.runModal()
