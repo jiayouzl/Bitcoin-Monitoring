@@ -120,23 +120,6 @@
 
 ## 🏗️ 技术架构
 
-### 架构概览
-
-```
-BTC价格监控器架构
-├── 应用层 (App Layer)
-│   ├── test1App.swift (应用入口)
-│   └── AppDelegate (应用生命周期)
-├── 界面层 (UI Layer)
-│   └── BTCMenuBarApp.swift (菜单栏控制器)
-├── 业务层 (Business Layer)
-│   └── PriceManager.swift (价格管理器)
-├── 服务层 (Service Layer)
-│   └── PriceService.swift (网络服务)
-└── 数据层 (Data Layer)
-    └── BTCPriceResponse.swift (数据模型)
-```
-
 ### 设计模式
 
 - **MVVM 架构**: SwiftUI + ObservableObject 模式
@@ -247,12 +230,8 @@ ping api.binance.com
 
 2. 验证 API 可用性
 ```bash
-# 测试不同币种的 API 可用性
+# 测试同币种 API 的可用性
 curl "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
-curl "https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT"
-curl "https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT"
-curl "https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT"
-curl "https://api.binance.com/api/v3/ticker/price?symbol=DOGEUSDT"
 ```
 
 3. 检查防火墙设置
@@ -295,3 +274,7 @@ curl "https://api.binance.com/api/v3/ticker/price?symbol=DOGEUSDT"
 Made with ❤️ for the Bitcoin community
 
 </div>
+
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=jiayouzl/Bitcoin-Monitoring&type=Date)](https://www.star-history.com/#jiayouzl/Bitcoin-Monitoring&Date)
