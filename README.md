@@ -16,7 +16,7 @@
 
 ## 📷︎ 界面预览
 
-![](./assets/pingtu-1761743534819@700×299.jpg)
+![](./assets/iShot_2025-10-30_14.40.58@353×382.png)
 
 ## ✨ 功能特性
 
@@ -27,6 +27,8 @@
 - **智能错误重试**: 网络异常时自动重试，最多 3 次
 - **手动刷新**: 支持快捷键 `Cmd+R` 手动刷新价格
 - **状态指示**: 直观显示加载、更新、错误状态
+- **价格复制功能**: 支持一键复制当前价格到剪贴板
+- **配置持久化**: 用户设置自动保存，重启后保持配置
 
 ### 🎨 用户体验
 - **SF Symbols 图标**: 使用原生 macOS 图标系统
@@ -50,7 +52,7 @@
 ### 开发环境
 - **开发工具**: Xcode 16.2 或更高版本
 - **Swift 版本**: Swift 5.0
-- **部署目标**: macOS 26.0.1
+- **部署目标**: macOS 12.4
 
 ### 网络要求
 - 需要稳定的互联网连接
@@ -75,6 +77,19 @@
    - 在 Xcode 中选择 "Bitcoin Monitoring" scheme
    - 点击运行按钮或使用快捷键： `Cmd+R`
 
+### 构建命令
+
+```bash
+# 构建项目
+xcodebuild -project "Bitcoin Monitoring.xcodeproj" -scheme "Bitcoin Monitoring" -configuration Debug build
+
+# 归档应用
+xcodebuild -project "Bitcoin Monitoring.xcodeproj" -scheme "Bitcoin Monitoring" -configuration Release archive
+
+# 清理构建缓存
+xcodebuild -project "Bitcoin Monitoring.xcodeproj" -scheme "Bitcoin Monitoring" clean
+```
+
 ## 📖 使用说明
 
 ### 基本操作
@@ -91,7 +106,11 @@
    - 点击菜单栏图标 → 币种选择 → 选择想要的币种
    - 支持 BTC/ETH/BNB/SOL/DOGE 五种主流币种
 
-4. **交互菜单**
+4. **复制价格**
+   - **Option + 点击** 币种名称可快速复制当前价格到剪贴板
+   - 价格格式为 `$XXX.XX`，可直接粘贴使用
+
+5. **交互菜单**
    - 点击菜单栏图标显示详细菜单
    - 查看更多信息并执行操作
 
@@ -100,6 +119,8 @@
 | 功能 | 描述 | 快捷键 |
 |------|------|--------|
 | 价格信息 | 显示当前选中币种的价格和状态 | - |
+| 快速复制 | Option+点击币种名称复制价格 | `Option+点击` |
+| 复制价格 | 一键复制当前价格到剪贴板 | - |
 | 币种选择 | 切换监控的币种 (BTC/ETH/BNB/SOL/DOGE) | - |
 | 错误信息 | 显示网络错误详情 (如有) | - |
 | 更新时间 | 显示上次成功更新时间 | - |
@@ -118,15 +139,37 @@
 | 错误 | `错误` | 网络连接或 API 异常 |
 | 正常 | `$价格` | 成功显示当前价格 |
 
+### 💡 使用技巧
+
+- **快速复制**: 按住 `Option` 键点击币种名称可立即复制当前价格
+- **切换币种**: 直接点击币种名称即可切换菜单栏显示的币种
+- **手动刷新**: 使用 `Cmd+R` 快捷键立即更新价格数据
+- **配置持久化**: 更改的刷新间隔和币种选择会自动保存，重启应用后保持设置
+- **错误恢复**: 网络异常时应用会自动重试，无需手动干预
+
 ## 🏗️ 技术架构
+
+### 组件架构
+
+```
+test1App.swift (App入口)
+├── AppDelegate (应用生命周期管理)
+└── BTCMenuBarApp (菜单栏核心逻辑)
+    ├── PriceManager (价格数据管理)
+    │   └── PriceService (网络请求服务)
+    ├── AppSettings (配置管理)
+    ├── CryptoSymbol (币种枚举)
+    ├── RefreshInterval (刷新间隔枚举)
+    └── BTCPriceResponse (数据模型)
+```
 
 ### 设计模式
 
 - **MVVM 架构**: SwiftUI + ObservableObject 模式
 - **Combine 框架**: 响应式数据流和事件处理
 - **依赖注入**: 服务层分离和松耦合设计
-- **单例模式**: PriceService 网络服务管理
 - **观察者模式**: 价格变化的响应式更新
+- **策略模式**: 可配置的刷新间隔选项
 
 ### 并发处理
 
