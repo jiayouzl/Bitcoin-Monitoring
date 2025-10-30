@@ -18,6 +18,9 @@ class BTCMenuBarApp: NSObject, ObservableObject {
     private let priceManager: PriceManager
     private var cancellables = Set<AnyCancellable>()
 
+    // 关于窗口管理器
+    private let aboutWindowManager = AboutWindowManager()
+
     override init() {
         let settings = AppSettings()
         self.appSettings = settings
@@ -404,31 +407,16 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         print("✅ 刷新间隔已更新为: \(interval.displayText)")
     }
 
-    // 显示关于对话框
+    // 显示关于窗口
     @objc private func showAbout() {
         let currentInterval = priceManager.getCurrentRefreshInterval()
-
-        // 获取应用版本信息
         let version = getAppVersion()
-        let alert = NSAlert()
-        alert.messageText = "BTC价格监控器 v\(version)"
-        alert.informativeText = """
-        🚀 一款 macOS 原生菜单栏应用，用于实时显示主流币种价格
-        
-        ✨ 功能特性：
-        • 实时显示主流币种/USDT价格（BTC/ETH/BNB/SOL/DOGE）
-        • 可配置刷新间隔（当前：\(currentInterval.displayText)）
-        • 支持手动刷新 (Cmd+R)
-        • 智能错误重试机制
-        • 优雅的SF Symbols图标
-        
-        💡 TIPS：
-        • 点击币种名称为切换主菜单栏显示
-        • Option + 鼠标左键复制价格
-        """
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "确定")
-        alert.runModal()
+
+        // 使用新的关于窗口替代 NSAlert
+        aboutWindowManager.showAboutWindow(
+            currentRefreshInterval: currentInterval.displayText,
+            appVersion: version
+        )
     }
 
     // 重置设置为默认值（仅在 Debug 模式下可用）
