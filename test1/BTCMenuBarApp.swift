@@ -8,6 +8,7 @@
 import SwiftUI
 import AppKit
 import Combine
+import UserNotifications
 
 // macOS菜单栏应用主类
 @MainActor
@@ -166,14 +167,29 @@ class BTCMenuBarApp: NSObject, ObservableObject {
                 guard let (priceOpt, errorOpt) = results[symbol], let menuItem = symbolMenuItems[symbol] else { continue }
                 if let price = priceOpt {
                     menuItem.title = "\(symbol.displayName): $\(self.formatPriceWithCommas(price))"
+                    menuItem.isEnabled = true // 启用菜单项，允许用户交互
+                    menuItem.action = #selector(self.copyPriceOrSelectSymbol(_:))
+                    menuItem.target = self
+                    menuItem.representedObject = ["symbol": symbol, "price": price]
                 } else if let error = errorOpt {
                     menuItem.title = "\(symbol.displayName): 错误"
                     menuItem.toolTip = error
+                    menuItem.isEnabled = true // 即使有错误也允许交互，用户可以查看错误详情
+                    menuItem.action = #selector(self.selectSymbol(_:))
+                    menuItem.target = self
+                    menuItem.representedObject = symbol.rawValue
                 } else {
                     menuItem.title = "\(symbol.displayName): 加载中..."
+                    // 保持禁用状态，直到加载完成
                 }
             }
         }
+
+        // 添加使用提示
+        let hintItem = NSMenuItem(title: "💡 点击选择币种，Option+点击复制价格", action: nil, keyEquivalent: "")
+        hintItem.isEnabled = false
+        menu.addItem(hintItem)
+        menu.addItem(NSMenuItem.separator())
 
         // 如果有错误，显示错误信息（带错误图标）
         if let errorMessage = priceManager.errorMessage {
@@ -333,6 +349,38 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         print("✅ 币种已更新为: \(symbol.pairDisplayName)")
     }
 
+    // 复制价格或选择币种（支持复制价格到剪贴板和切换币种）
+    @objc private func copyPriceOrSelectSymbol(_ sender: NSMenuItem) {
+        guard let data = sender.representedObject as? [String: Any],
+              let symbol = data["symbol"] as? CryptoSymbol,
+              let price = data["price"] as? Double else {
+            return
+        }
+
+        // 检查是否按住了 Option 键，如果是则复制价格到剪贴板
+        let currentEvent = NSApp.currentEvent
+        let isOptionPressed = currentEvent?.modifierFlags.contains(.option) ?? false
+
+        if isOptionPressed {
+            // 复制价格到剪贴板
+            let priceString = formatPriceWithCommas(price)
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.setString("$\(priceString)", forType: .string)
+            
+            print("✅ 已复制 \(symbol.displayName) 价格到剪贴板: $\(priceString)")
+            
+            // 显示通知告知用户已复制
+            Task {
+                await self.showCopyNotification(symbol: symbol, price: priceString)
+            }
+        } else {
+            // 默认行为：选择该币种
+            appSettings.saveSelectedSymbol(symbol)
+            print("✅ 币种已更新为: \(symbol.pairDisplayName)")
+        }
+    }
+
     // 选择刷新间隔
     @objc private func selectRefreshInterval(_ sender: NSMenuItem) {
         guard let interval = sender.representedObject as? RefreshInterval else {
@@ -395,6 +443,42 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         }
 
         return version
+    }
+
+    // 显示价格复制通知
+    private func showCopyNotification(symbol: CryptoSymbol, price: String) async {
+        let center = UNUserNotificationCenter.current()
+        
+        // 请求通知权限（如果尚未授权）
+        do {
+            let granted = try await center.requestAuthorization(options: [.alert, .sound])
+            if !granted {
+                return // 用户拒绝了通知权限
+            }
+        } catch {
+            print("❌ 通知权限请求失败: \(error)")
+            return
+        }
+        
+        // 创建通知内容
+        let content = UNMutableNotificationContent()
+        content.title = "价格已复制"
+        content.body = "\(symbol.displayName): $\(price)"
+        content.sound = .default
+        
+        // 创建通知请求
+        let request = UNNotificationRequest(
+            identifier: "price-copied-\(Date().timeIntervalSince1970)",
+            content: content,
+            trigger: nil // 立即显示
+        )
+        
+        // 发送通知
+        do {
+            try await center.add(request)
+        } catch {
+            print("❌ 通知发送失败: \(error)")
+        }
     }
 
     // 退出应用
