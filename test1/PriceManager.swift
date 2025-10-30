@@ -240,13 +240,13 @@ class PriceManager: ObservableObject {
     }
     
     /// 并发获取所有支持币种的价格（用于菜单一次性显示全部币种）
-    func fetchAllPrices() async -> [CryptoSymbol: (price: Double?, errorMessage: String?)] {
+    nonisolated func fetchAllPrices() async -> [CryptoSymbol: (price: Double?, errorMessage: String?)] {
         var results = [CryptoSymbol: (Double?, String?)]()
 
         await withTaskGroup(of: (CryptoSymbol, Double?, String?).self) { group in
             for symbol in CryptoSymbol.allCases {
                 group.addTask { [weak self] in
-                    guard let self = self else { return (symbol, nil, "内部错误") }
+                    guard let self = self else { return (symbol, nil, "PriceManager已释放") }
                     do {
                         let price = try await self.priceService.fetchPrice(for: symbol)
                         return (symbol, price, nil)
