@@ -1,11 +1,53 @@
 //
 //  AboutWindowView.swift
-//  test1
+//  Bitcoin Monitoring
 //
 //  Created by Mark on 2025/10/31.
 //
 
 import SwiftUI
+
+/**
+ * GitHub版本信息模型
+ * 用于解析GitHub API返回的版本数据
+ */
+struct GitHubRelease: Codable {
+    let name: String
+    let zipball_url: String
+    let tarball_url: String
+    let commit: GitHubCommit
+}
+
+struct GitHubCommit: Codable {
+    let sha: String
+    let url: String
+}
+
+/**
+ * 更新错误类型
+ */
+enum UpdateError: LocalizedError {
+    case invalidURL
+    case invalidResponse
+    case httpError(Int)
+    case noReleasesFound
+    case decodingError
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL:
+            return "无效的API地址"
+        case .invalidResponse:
+            return "无效的服务器响应"
+        case .httpError(let code):
+            return "服务器错误 (HTTP \(code))"
+        case .noReleasesFound:
+            return "未找到发布版本"
+        case .decodingError:
+            return "版本数据解析失败"
+        }
+    }
+}
 
 /**
  * 关于窗口视图组件
@@ -20,6 +62,11 @@ struct AboutWindowView: View {
 
     // 应用版本
     let appVersion: String
+
+    // 更新检测状态
+    @State private var isCheckingForUpdates = false
+    @State private var showingUpdateAlert = false
+    @State private var updateAlertMessage = ""
 
     var body: some View {
         VStack(spacing: 20) {
@@ -79,14 +126,21 @@ struct AboutWindowView: View {
 
             // 按钮区域
             HStack(spacing: 12) {
-                // GitHub 按钮
-                Button(action: openGitHub) {
+                // 检测更新按钮
+                Button(action: checkForUpdates) {
                     HStack {
-                        Image(systemName: "star.circle")
-                        Text("GitHub")
+                        if isCheckingForUpdates {
+                            ProgressView()
+                                .scaleEffect(0.4)
+                                .frame(width: 8, height: 8)
+                        } else {
+                            Image(systemName: "arrow.down.circle")
+                        }
+                        Text(isCheckingForUpdates ? "检测中..." : "检测更新")
                     }
                 }
                 .buttonStyle(.bordered)
+                .disabled(isCheckingForUpdates)
 
                 Spacer()
 
@@ -101,23 +155,216 @@ struct AboutWindowView: View {
         }
         .padding(24)
         .frame(width: 420, height: 500)
+        .alert("更新检测", isPresented: $showingUpdateAlert) {
+            Button("确定", role: .cancel) {
+                // 如果消息中包含"发现新版本"，则打开发布页面并关闭窗口
+                if updateAlertMessage.contains("发现新版本") {
+                    openReleasePage()
+                    onClose()
+                }
+            }
+        } message: {
+            Text(updateAlertMessage)
+        }
     }
 
     /**
-     * 打开 GitHub 页面
+     * 检测更新
      */
-    private func openGitHub() {
-        let githubURL = "https://github.com/jiayouzl/Bitcoin-Monitoring"
+    private func checkForUpdates() {
+        print("🔍 用户点击了检测更新按钮")
 
-        // 确保URL有效
-        guard let url = URL(string: githubURL) else {
-            print("❌ 无效的URL: \(githubURL)")
+        isCheckingForUpdates = true
+
+        // 在后台线程执行网络请求
+        DispatchQueue.global(qos: .userInitiated).async {
+            self.performUpdateCheck()
+        }
+    }
+
+    /**
+     * 执行更新检测
+     */
+    private func performUpdateCheck() {
+        do {
+            // 获取最新版本信息
+            let latestVersion = try fetchLatestVersion()
+            print("✅ 获取到最新版本: \(latestVersion)")
+
+            // 比较版本号
+            let comparisonResult = compareVersions(appVersion, latestVersion)
+            print("📊 版本比较结果: \(comparisonResult)")
+
+            // 回到主线程更新UI状态
+            DispatchQueue.main.async {
+                self.isCheckingForUpdates = false
+
+                switch comparisonResult {
+                case .orderedSame:
+                    self.updateAlertMessage = "🎉 您已使用最新版本！"
+                    self.showingUpdateAlert = true
+                    print("✅ 已是最新版本")
+                case .orderedAscending:
+                    self.updateAlertMessage = "🆕 发现新版本！\n当前版本：\(self.appVersion)\n最新版本：\(latestVersion)\n\n点击确定后将自动打开GitHub发布页面。"
+                    self.showingUpdateAlert = true
+                    print("🆕 发现新版本: \(latestVersion)")
+                case .orderedDescending:
+                    self.updateAlertMessage = "🎉 您已使用最新版本！\n当前版本：\(self.appVersion)"
+                    self.showingUpdateAlert = true
+                    print("✅ 当前版本比发布版本更新")
+                }
+            }
+
+        } catch {
+            let errorMessage = error.localizedDescription
+            print("❌ 检测更新失败: \(errorMessage)")
+
+            DispatchQueue.main.async {
+                self.isCheckingForUpdates = false
+                self.updateAlertMessage = "❌ 检测更新失败\n\n错误信息：\(errorMessage)\n\n请检查网络连接后重试。"
+                self.showingUpdateAlert = true
+            }
+        }
+    }
+
+    /**
+     * 从GitHub API获取最新版本
+     * - Returns: 最新版本号字符串
+     * - Throws: 网络错误或解析错误
+     */
+    private func fetchLatestVersion() throws -> String {
+        // GitHub API配置
+        let gitHubAPIURL = "https://api.github.com/repos/jiayouzl/Bitcoin-Monitoring/tags"
+
+        // 构建请求URL
+        guard let url = URL(string: gitHubAPIURL) else {
+            throw UpdateError.invalidURL
+        }
+
+        print("🌐 请求URL: \(url)")
+
+        // 使用信号量实现同步网络请求
+        let semaphore = DispatchSemaphore(value: 0)
+        var result: Result<String, Error>?
+
+        // 配置请求
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+        request.setValue("Bitcoin-Monitoring", forHTTPHeaderField: "User-Agent")
+        request.timeoutInterval = 10.0
+
+        // 发送网络请求
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                result = .failure(error)
+                semaphore.signal()
+                return
+            }
+
+            // 检查HTTP响应状态
+            guard let httpResponse = response as? HTTPURLResponse else {
+                result = .failure(UpdateError.invalidResponse)
+                semaphore.signal()
+                return
+            }
+
+            guard httpResponse.statusCode == 200 else {
+                result = .failure(UpdateError.httpError(httpResponse.statusCode))
+                semaphore.signal()
+                return
+            }
+
+            print("✅ API响应状态码: \(httpResponse.statusCode)")
+
+            guard let data = data else {
+                result = .failure(UpdateError.noReleasesFound)
+                semaphore.signal()
+                return
+            }
+
+            do {
+                // 解析JSON数据
+                let releases = try JSONDecoder().decode([GitHubRelease].self, from: data)
+
+                guard let latestRelease = releases.first else {
+                    result = .failure(UpdateError.noReleasesFound)
+                    semaphore.signal()
+                    return
+                }
+
+                // 提取版本号（去掉v前缀）
+                let versionString = latestRelease.name
+                let cleanVersion = versionString.hasPrefix("v") ?
+                    String(versionString.dropFirst()) : versionString
+
+                result = .success(cleanVersion)
+            } catch {
+                result = .failure(UpdateError.decodingError)
+            }
+
+            semaphore.signal()
+        }
+
+        task.resume()
+        semaphore.wait()
+
+        // 处理结果
+        guard let result = result else {
+            throw UpdateError.noReleasesFound
+        }
+
+        switch result {
+        case .success(let version):
+            return version
+        case .failure(let error):
+            throw error
+        }
+    }
+
+    /**
+     * 比较版本号
+     * - Parameters:
+     *   - version1: 版本号1
+     *   - version2: 版本号2
+     * - Returns: 比较结果
+     */
+    private func compareVersions(_ version1: String, _ version2: String) -> ComparisonResult {
+        // 处理版本号格式，移除非数字字符（除点外）
+        let cleanV1 = version1.replacingOccurrences(of: "[^0-9.]", with: "", options: .regularExpression)
+        let cleanV2 = version2.replacingOccurrences(of: "[^0-9.]", with: "", options: .regularExpression)
+
+        let v1Components = cleanV1.split(separator: ".").compactMap { Int($0) }
+        let v2Components = cleanV2.split(separator: ".").compactMap { Int($0) }
+
+        let maxCount = max(v1Components.count, v2Components.count)
+
+        for i in 0..<maxCount {
+            let v1Value = i < v1Components.count ? v1Components[i] : 0
+            let v2Value = i < v2Components.count ? v2Components[i] : 0
+
+            if v1Value < v2Value {
+                return .orderedAscending
+            } else if v1Value > v2Value {
+                return .orderedDescending
+            }
+        }
+
+        return .orderedSame
+    }
+
+    /**
+     * 打开发布页面
+     */
+    private func openReleasePage() {
+        let releasePageURL = "https://github.com/jiayouzl/Bitcoin-Monitoring/releases/latest"
+        guard let url = URL(string: releasePageURL) else {
+            print("❌ 无效的发布页面URL: \(releasePageURL)")
             return
         }
 
-        // 使用默认浏览器打开URL
         NSWorkspace.shared.open(url)
-        print("✅ 已在浏览器中打开GitHub页面: \(githubURL)")
+        print("✅ 已在浏览器中打开发布页面: \(releasePageURL)")
     }
 }
 
