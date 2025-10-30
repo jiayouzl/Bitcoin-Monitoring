@@ -310,8 +310,8 @@ curl "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
 - **GitHub**: [@jiayouzl](https://github.com/jiayouzl/)
 - **项目主页**: [https://github.com/jiayouzl/Bitcoin-Monitoring](https://github.com/jiayouzl/Bitcoin-Monitoring)
 
----
-
 ## ⭐ Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=jiayouzl/Bitcoin-Monitoring&type=Date)](https://www.star-history.com/#jiayouzl/Bitcoin-Monitoring&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=jiayouzl/Bitcoin-Monitoring&type=date&legend=top-left)](https://www.star-history.com/#jiayouzl/Bitcoin-Monitoring&type=date&legend=top-left)
+
+---
