@@ -1,13 +1,15 @@
 # BTC 价格监控器
 
 <div align="center">
+[![BTC Icon](https://img.shields.io/badge/BTC-Bitcoin-orange&logo=bitcoin&logoColor=white)](#)
+[![platform](https://img.shields.io/badge/platform-macOS-000000?logo=apple&logoColor=white)](#)
+[![macOS](https://img.shields.io/badge/macOS-13.1+-blue&logo=apple)](#)
+[![xcode](https://img.shields.io/badge/Xcode-16.2%2B-1575F9?logo=xcode&logoColor=white)](#)
+[![swift](https://img.shields.io/badge/Swift-5.7%2B-FA7343?logo=swift&logoColor=white)](#)
+[![ui](https://img.shields.io/badge/SwiftUI-%2B%20AppKit-43a047)](#)
+[![license](https://img.shields.io/badge/License-GPL%20v3-44CC11)](#license)
 
-![BTC Icon](https://img.shields.io/badge/BTC-Bitcoin-orange?style=for-the-badge&logo=bitcoin)
-![Swift](https://img.shields.io/badge/Swift-5.0-orange?style=for-the-badge&logo=swift)
-![macOS](https://img.shields.io/badge/macOS-12.4+-blue?style=for-the-badge&logo=apple)
-![License](https://img.shields.io/badge/License-GPL%20v3-green?style=for-the-badge)
-
-一款 macOS 原生菜单栏应用，用于实时监控主流虚拟货币价格，支持 BTC/ETH/BNB/SOL/DOGE 多种币种。之前使用Python写过虽然也蛮好用但最终还是决定用 macOS 原生语言来重写，已经编译了`Intel`与`Apple Silicon`的通用应用，请至[releases](https://github.com/jiayouzl/Bitcoin-Monitoring/releases/latest)下载。
+一款 macOS 原生菜单栏应用，用于实时监控主流加密货币的价格，支持 BTC/ETH/BNB/SOL/DOGE 多种币种。基于 Swift 编写，致力于打造一款高性能、极简风格的应用APP，已经编译了`Intel`与`Apple Silicon`的通用应用，请至[releases](https://github.com/jiayouzl/Bitcoin-Monitoring/releases/latest)下载。
 
 </div>
 
@@ -16,7 +18,7 @@
 
 ## 📷︎ 界面预览
 
-![](./assets/iShot_2025-10-30_19.22.39@383×463.png)
+![](./assets/iShot_2025-10-31_07.04.02@378×431.png)
 
 ## ✨ 功能特性
 
@@ -150,20 +152,6 @@ xcodebuild -project "Bitcoin Monitoring.xcodeproj" -scheme "Bitcoin Monitoring" 
 - **错误恢复**: 网络异常时应用会自动重试，无需手动干预
 
 ## 🏗️ 技术架构
-
-### 组件架构
-
-```
-test1App.swift (App入口)
-├── AppDelegate (应用生命周期管理)
-└── BTCMenuBarApp (菜单栏核心逻辑)
-    ├── PriceManager (价格数据管理)
-    │   └── PriceService (网络请求服务)
-    ├── AppSettings (配置管理)
-    ├── CryptoSymbol (币种枚举)
-    ├── RefreshInterval (刷新间隔枚举)
-    └── BTCPriceResponse (数据模型)
-```
 
 ### 设计模式
 
