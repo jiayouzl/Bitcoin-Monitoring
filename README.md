@@ -7,7 +7,7 @@
 ![macOS](https://img.shields.io/badge/macOS-12.4+-blue?style=for-the-badge&logo=apple)
 ![License](https://img.shields.io/badge/License-GPL%20v3-green?style=for-the-badge)
 
-一款 macOS 原生菜单栏应用，用于实时监控主流虚拟货币价格，支持 BTC/ETH/BNB/SOL/DOGE 多种币种，之前使用Python写过虽然也蛮好用但最终还是决定用macOS原生语言开发，已经编译了`Intel`与`Apple Silicon`的通用应用，请至[releases](https://github.com/jiayouzl/Bitcoin-Monitoring/releases/latest)下载。
+一款 macOS 原生菜单栏应用，用于实时监控主流虚拟货币价格，支持 BTC/ETH/BNB/SOL/DOGE 多种币种。之前使用Python写过虽然也蛮好用但最终还是决定用macOS原生语言重写，已经编译了`Intel`与`Apple Silicon`的通用应用，请至[releases](https://github.com/jiayouzl/Bitcoin-Monitoring/releases/latest)下载。
 
 </div>
 
@@ -29,13 +29,14 @@
 - **状态指示**: 直观显示加载、更新、错误状态
 - **价格复制功能**: 支持一键复制当前价格到剪贴板
 - **配置持久化**: 用户设置自动保存，重启后保持配置
+- **开机自启动**: 可选是否开机自动启动APP
 
 ### 🎨 用户体验
-- **SF Symbols 图标**: 使用原生 macOS 图标系统
 - **中文界面**: 完整的中文用户界面
 - **优雅动画**: 流畅的状态切换动画
 - **轻量级设计**: 最小化系统资源占用
 - **后台运行**: 不占用 Dock 空间，专注菜单栏
+- **SF Symbols 图标**: 使用原生 macOS 图标系统
 
 ### 🛡️ 可靠性
 - **网络容错**: 完善的网络异常处理机制
@@ -46,13 +47,13 @@
 ## 📋 安装要求
 
 ### 系统要求
-- **操作系统**: macOS 12.4 或更高版本
+- **操作系统**: macOS 13.1 或更高版本
 - **架构支持**: Intel 和 Apple Silicon (M1/M2/M3/M4/M5)
 
 ### 开发环境
 - **开发工具**: Xcode 16.2 或更高版本
 - **Swift 版本**: Swift 5.0
-- **部署目标**: macOS 12.4
+- **部署目标**: macOS 13.1
 
 ### 网络要求
 - 需要稳定的互联网连接
@@ -107,7 +108,7 @@ xcodebuild -project "Bitcoin Monitoring.xcodeproj" -scheme "Bitcoin Monitoring" 
    - 支持 BTC/ETH/BNB/SOL/DOGE 五种主流币种
 
 4. **复制价格**
-   - **Option + 点击** 币种名称可快速复制当前价格到剪贴板
+   - **Option + 左键点击** 币种名称可快速复制当前价格到剪贴板
    - 价格格式为 `$XXX.XX`，可直接粘贴使用
 
 5. **交互菜单**
@@ -126,6 +127,7 @@ xcodebuild -project "Bitcoin Monitoring.xcodeproj" -scheme "Bitcoin Monitoring" 
 | 更新时间 | 显示上次成功更新时间 | - |
 | 刷新价格 | 手动获取最新价格 | `Cmd+R` |
 | 刷新设置 | 设置刷新的间隔 | - |
+| 开机启动 | 设置开机自动启动APP | - |
 | GitHub | 打开仓库查询更新 | - |
 | 关于 | 查看应用信息和版本 | - |
 | 退出 | 完全退出应用 | `Cmd+Q` |
@@ -309,14 +311,6 @@ curl "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
 - **项目主页**: [https://github.com/jiayouzl/Bitcoin-Monitoring](https://github.com/jiayouzl/Bitcoin-Monitoring)
 
 ---
-
-<div align="center">
-
-**⭐ 如果这个项目对你有帮助，请给它一个 Star！**
-
-Made with ❤️ for the Bitcoin community
-
-</div>
 
 ## ⭐ Star History
 

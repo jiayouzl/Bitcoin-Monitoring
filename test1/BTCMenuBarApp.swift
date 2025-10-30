@@ -264,6 +264,18 @@ class BTCMenuBarApp: NSObject, ObservableObject {
 
         menu.addItem(NSMenuItem.separator())
 
+        // 添加开机启动开关
+        let launchAtLoginTitle = appSettings.launchAtLogin ? "✓ 开机启动" : "开机启动"
+        let launchAtLoginItem = NSMenuItem(title: launchAtLoginTitle, action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
+        if let powerImage = NSImage(systemSymbolName: "tv", accessibilityDescription: "开机启动") {
+            powerImage.size = NSSize(width: 16, height: 16)
+            launchAtLoginItem.image = powerImage
+        }
+        launchAtLoginItem.target = self
+        menu.addItem(launchAtLoginItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         #if DEBUG
         // 添加重置设置按钮（仅在 Debug 模式下显示）
         let resetItem = NSMenuItem(title: "重置设置", action: #selector(resetSettings), keyEquivalent: "")
@@ -474,6 +486,48 @@ class BTCMenuBarApp: NSObject, ObservableObject {
     }
 
     
+    // 切换开机自启动状态
+    @objc private func toggleLaunchAtLogin() {
+        let newState = !appSettings.launchAtLogin
+
+        // 检查 macOS 版本兼容性
+        if #available(macOS 13.0, *) {
+            // 显示确认对话框
+            let alert = NSAlert()
+            alert.messageText = newState ? "启用开机自启动" : "禁用开机自启动"
+            alert.informativeText = newState ?
+                "应用将在系统启动时自动运行，您也可以随时在系统偏好设置中更改此选项。" :
+                "应用将不再在系统启动时自动运行。"
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "确定")
+            alert.addButton(withTitle: "取消")
+
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn {
+                // 用户确认，执行切换
+                appSettings.toggleLoginItem(enabled: newState)
+
+                // 显示结果反馈
+                let resultAlert = NSAlert()
+                resultAlert.messageText = newState ? "开机自启动已启用" : "开机自启动已禁用"
+                resultAlert.informativeText = newState ?
+                    "Bitcoin Monitoring 将在下次系统启动时自动运行。" :
+                    "Bitcoin Monitoring 不会在系统启动时自动运行。"
+                resultAlert.alertStyle = .informational
+                resultAlert.addButton(withTitle: "确定")
+                resultAlert.runModal()
+            }
+        } else {
+            // 不支持的系统版本
+            let alert = NSAlert()
+            alert.messageText = "系统版本不支持"
+            alert.informativeText = "开机自启动功能需要 macOS 13.0 (Ventura) 或更高版本。"
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "确定")
+            alert.runModal()
+        }
+    }
+
     // 退出应用
     @objc private func quitApp() {
         NSApplication.shared.terminate(nil)
