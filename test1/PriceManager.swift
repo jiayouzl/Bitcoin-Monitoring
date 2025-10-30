@@ -15,7 +15,7 @@ class PriceManager: ObservableObject {
     @Published var isFetching: Bool = false
     @Published var lastError: PriceError?
     @Published var selectedSymbol: CryptoSymbol
-
+    
     private let priceService = PriceService()
     private var timer: Timer?
     private var currentRefreshInterval: TimeInterval = RefreshInterval.thirtySeconds.rawValue // 当前刷新间隔
@@ -264,5 +264,17 @@ class PriceManager: ObservableObject {
         }
 
         return results
+    }
+
+    /// 获取单个币种的价格（用于Option+点击复制功能）
+    /// - Parameter symbol: 要获取价格的币种
+    /// - Returns: 价格值，如果获取失败返回nil
+    func fetchSinglePrice(for symbol: CryptoSymbol) async -> Double? {
+        do {
+            return try await priceService.fetchPrice(for: symbol)
+        } catch {
+            print("❌ 获取 \(symbol.displayName) 价格失败: \(error.localizedDescription)")
+            return nil
+        }
     }
 }

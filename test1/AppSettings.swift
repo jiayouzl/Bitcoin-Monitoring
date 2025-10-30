@@ -19,7 +19,7 @@ class AppSettings: ObservableObject {
     @Published var refreshInterval: RefreshInterval = .thirtySeconds
     /// 当前选中的币种
     @Published var selectedSymbol: CryptoSymbol = .btc
-
+    
     // MARK: - Private Properties
 
     private let defaults = UserDefaults.standard
@@ -35,7 +35,7 @@ class AppSettings: ObservableObject {
     // MARK: - Configuration Methods
 
     /// 从UserDefaults加载保存的配置
-    /// 如果没有保存的配置，使用默认值（30秒）
+    /// 如果没有保存的配置，使用默认值（30秒 + BTC）
     func loadSettings() {
         #if DEBUG
         print("🔧 [AppSettings] 开始加载配置...")
@@ -74,13 +74,25 @@ class AppSettings: ObservableObject {
         }
         #endif
 
+        // 改进的币种配置验证逻辑
         if hasSymbolKey,
            let savedSymbolRaw = savedSymbolRaw,
+           !savedSymbolRaw.isEmpty, // 确保不是空字符串
            let savedSymbol = CryptoSymbol(rawValue: savedSymbolRaw) {
-            selectedSymbol = savedSymbol
-            #if DEBUG
-            print("🔧 [AppSettings] ✅ 使用保存的币种: \(savedSymbol.displayName)")
-            #endif
+            // 额外验证：确保读取的币种在支持列表中
+            if CryptoSymbol.allCases.contains(savedSymbol) {
+                selectedSymbol = savedSymbol
+                #if DEBUG
+                print("🔧 [AppSettings] ✅ 使用保存的币种: \(savedSymbol.displayName)")
+                #endif
+            } else {
+                // 如果保存的币种不在支持列表中，重置为默认值
+                selectedSymbol = .btc
+                #if DEBUG
+                print("🔧 [AppSettings] ⚠️ 保存的币种不在支持列表中，重置为默认值: \(selectedSymbol.displayName)")
+                #endif
+                saveSelectedSymbol(.btc)
+            }
         } else {
             selectedSymbol = .btc
             #if DEBUG
@@ -91,6 +103,25 @@ class AppSettings: ObservableObject {
 
         #if DEBUG
         print("🔧 [AppSettings] 配置加载完成 - 刷新间隔: \(refreshInterval.displayText), 币种: \(selectedSymbol.displayName)")
+        #endif
+    }
+
+    /// 重置所有设置为默认值
+    /// 用于调试或故障排除
+    func resetToDefaults() {
+        #if DEBUG
+        print("🔧 [AppSettings] 重置所有设置为默认值")
+        #endif
+
+        refreshInterval = .thirtySeconds
+        selectedSymbol = .btc
+
+        // 保存默认值
+        saveRefreshInterval(.thirtySeconds)
+        saveSelectedSymbol(.btc)
+
+        #if DEBUG
+        print("🔧 [AppSettings] 重置完成 - 刷新间隔: \(refreshInterval.displayText), 币种: \(selectedSymbol.displayName)")
         #endif
     }
 

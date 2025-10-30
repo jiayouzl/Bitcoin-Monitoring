@@ -8,7 +8,6 @@
 import SwiftUI
 import AppKit
 import Combine
-import UserNotifications
 
 // macOS菜单栏应用主类
 @MainActor
@@ -85,7 +84,7 @@ class BTCMenuBarApp: NSObject, ObservableObject {
             .store(in: &cancellables)
     }
 
-    // 更新菜单栏标题
+    // 更新菜单栏标题（显示当前选中币种价格）
     private func updateMenuBarTitle(price: Double) {
         DispatchQueue.main.async {
             guard let button = self.statusItem?.button else { return }
@@ -145,17 +144,22 @@ class BTCMenuBarApp: NSObject, ObservableObject {
     private func showMenu(from view: NSView) {
         let menu = NSMenu()
 
-        // 添加价格信息项（带币种图标）
+        // 添加价格信息项（带币种图标和选中状态）
         // 我们将为每一个支持的币种添加一个菜单项，并在后台异步填充它们的价格
         var symbolMenuItems: [CryptoSymbol: NSMenuItem] = [:]
+        let currentSymbol = priceManager.selectedSymbol
+
         for symbol in CryptoSymbol.allCases {
-            let placeholderTitle = "\(symbol.displayName): 加载中..."
-            let item = NSMenuItem(title: placeholderTitle, action: nil, keyEquivalent: "")
+            let isCurrent = (symbol == currentSymbol)
+            let placeholderTitle = isCurrent ? "✓ \(symbol.displayName): 加载中..." : "  \(symbol.displayName): 加载中..."
+            let item = NSMenuItem(title: placeholderTitle, action: #selector(self.selectOrCopySymbol(_:)), keyEquivalent: "")
+            item.target = self // 关键：必须设置target
             if let icon = symbolImage(for: symbol) {
                 icon.size = NSSize(width: 16, height: 16)
                 item.image = icon
             }
-            item.isEnabled = false
+            item.isEnabled = true // 立即启用菜单项，允许用户交互
+            item.representedObject = ["symbol": symbol, "price": 0.0]
             menu.addItem(item)
             symbolMenuItems[symbol] = item
         }
@@ -163,32 +167,36 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         // 异步并发获取所有币种价格并更新对应的菜单项
         Task { @MainActor in
             let results = await self.priceManager.fetchAllPrices()
+            let currentSymbolAfter = self.priceManager.selectedSymbol
             for symbol in CryptoSymbol.allCases {
                 guard let (priceOpt, errorOpt) = results[symbol], let menuItem = symbolMenuItems[symbol] else { continue }
+                let isCurrent = (symbol == currentSymbolAfter)
+
                 if let price = priceOpt {
-                    menuItem.title = "\(symbol.displayName): $\(self.formatPriceWithCommas(price))"
+                    let title = isCurrent ? "✓ \(symbol.displayName): $\(self.formatPriceWithCommas(price))" : "  \(symbol.displayName): $\(self.formatPriceWithCommas(price))"
+                    menuItem.title = title
                     menuItem.isEnabled = true // 启用菜单项，允许用户交互
-                    menuItem.action = #selector(self.copyPriceOrSelectSymbol(_:))
-                    menuItem.target = self
+                    menuItem.target = self // 确保target正确设置
                     menuItem.representedObject = ["symbol": symbol, "price": price]
                 } else if let error = errorOpt {
-                    menuItem.title = "\(symbol.displayName): 错误"
+                    let title = isCurrent ? "✓ \(symbol.displayName): 错误" : "  \(symbol.displayName): 错误"
+                    menuItem.title = title
                     menuItem.toolTip = error
-                    menuItem.isEnabled = true // 即使有错误也允许交互，用户可以查看错误详情
-                    menuItem.action = #selector(self.selectSymbol(_:))
-                    menuItem.target = self
-                    menuItem.representedObject = symbol.rawValue
+                    menuItem.isEnabled = false // 有错误时禁用交互
+                    menuItem.target = self // 确保target正确设置
                 } else {
-                    menuItem.title = "\(symbol.displayName): 加载中..."
-                    // 保持禁用状态，直到加载完成
+                    let title = isCurrent ? "✓ \(symbol.displayName): 加载中..." : "  \(symbol.displayName): 加载中..."
+                    menuItem.title = title
+                    menuItem.target = self // 确保target正确设置
+                    // 保持启用状态，允许用户交互
                 }
             }
         }
 
         // 添加使用提示
-        let hintItem = NSMenuItem(title: "💡 点击选择币种，Option+点击复制价格", action: nil, keyEquivalent: "")
-        hintItem.isEnabled = false
-        menu.addItem(hintItem)
+//        let hintItem = NSMenuItem(title: "💡 点击切换币种，Option+点击复制价格", action: nil, keyEquivalent: "")
+//        hintItem.isEnabled = false
+//        menu.addItem(hintItem)
         menu.addItem(NSMenuItem.separator())
 
         // 如果有错误，显示错误信息（带错误图标）
@@ -214,36 +222,7 @@ class BTCMenuBarApp: NSObject, ObservableObject {
 
         menu.addItem(NSMenuItem.separator())
 
-        // 币种选择子菜单
-        let symbolSettingsItem = NSMenuItem(title: "币种选择", action: nil, keyEquivalent: "")
-        if let symbolSettingsImage = NSImage(systemSymbolName: "chart.line.uptrend.xyaxis", accessibilityDescription: "币种选择") {
-            symbolSettingsImage.size = NSSize(width: 16, height: 16)
-            symbolSettingsItem.image = symbolSettingsImage
-        }
-
-        let symbolMenu = NSMenu()
-        let currentSymbol = priceManager.selectedSymbol
-        for symbol in CryptoSymbol.allCases {
-            let isCurrent = (symbol == currentSymbol)
-            let item = NSMenuItem(
-                title: symbol.menuTitle(isCurrent: isCurrent),
-                action: #selector(selectSymbol(_:)),
-                keyEquivalent: ""
-            )
-            item.target = self
-            item.isEnabled = !isCurrent
-            item.representedObject = symbol.rawValue
-            if let icon = symbolImage(for: symbol) {
-                icon.size = NSSize(width: 16, height: 16)
-                item.image = icon
-            }
-            symbolMenu.addItem(item)
-        }
-        symbolSettingsItem.submenu = symbolMenu
-        menu.addItem(symbolSettingsItem)
-
-        menu.addItem(NSMenuItem.separator())
-
+  
         // 添加刷新按钮（带刷新图标）
         let refreshTitle = priceManager.isFetching ? "刷新中..." : "刷新价格"
         let refreshItem = NSMenuItem(title: refreshTitle, action: #selector(refreshPrice), keyEquivalent: "r")
@@ -284,6 +263,19 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         menu.addItem(refreshSettingsItem)
 
         menu.addItem(NSMenuItem.separator())
+
+        #if DEBUG
+        // 添加重置设置按钮（仅在 Debug 模式下显示）
+        let resetItem = NSMenuItem(title: "重置设置", action: #selector(resetSettings), keyEquivalent: "")
+        if let resetImage = NSImage(systemSymbolName: "arrow.counterclockwise", accessibilityDescription: "重置设置") {
+            resetImage.size = NSSize(width: 16, height: 16)
+            resetItem.image = resetImage
+        }
+        resetItem.target = self
+        menu.addItem(resetItem)
+
+        menu.addItem(NSMenuItem.separator())
+        #endif
 
         // 添加GitHub按钮（带GitHub图标）
         let checkUpdateItem = NSMenuItem(title: "GitHub", action: #selector(checkForUpdates), keyEquivalent: "")
@@ -338,22 +330,12 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         }
     }
 
-    // 选择币种
-    @objc private func selectSymbol(_ sender: NSMenuItem) {
-        guard let rawValue = sender.representedObject as? String,
-              let symbol = CryptoSymbol(rawValue: rawValue) else {
-            return
-        }
-
-        appSettings.saveSelectedSymbol(symbol)
-        print("✅ 币种已更新为: \(symbol.pairDisplayName)")
-    }
-
-    // 复制价格或选择币种（支持复制价格到剪贴板和切换币种）
-    @objc private func copyPriceOrSelectSymbol(_ sender: NSMenuItem) {
+  
+    // 选择币种或复制价格（支持Option键切换功能）
+    @objc private func selectOrCopySymbol(_ sender: NSMenuItem) {
         guard let data = sender.representedObject as? [String: Any],
-              let symbol = data["symbol"] as? CryptoSymbol,
-              let price = data["price"] as? Double else {
+              let symbol = data["symbol"] as? CryptoSymbol else {
+            print("❌ 无法获取菜单项数据")
             return
         }
 
@@ -363,21 +345,35 @@ class BTCMenuBarApp: NSObject, ObservableObject {
 
         if isOptionPressed {
             // 复制价格到剪贴板
-            let priceString = formatPriceWithCommas(price)
-            let pasteboard = NSPasteboard.general
-            pasteboard.clearContents()
-            pasteboard.setString("$\(priceString)", forType: .string)
-            
-            print("✅ 已复制 \(symbol.displayName) 价格到剪贴板: $\(priceString)")
-            
-            // 显示通知告知用户已复制
-            Task {
-                await self.showCopyNotification(symbol: symbol, price: priceString)
+            let price = data["price"] as? Double ?? 0.0
+
+            // 如果价格还没加载完成，先获取价格再复制
+            if price == 0.0 {
+                Task { @MainActor in
+                    print("🔄 价格未加载，正在获取 \(symbol.displayName) 价格...")
+                    if let newPrice = await self.priceManager.fetchSinglePrice(for: symbol) {
+                        let priceString = self.formatPriceWithCommas(newPrice)
+                        let pasteboard = NSPasteboard.general
+                        pasteboard.clearContents()
+                        pasteboard.setString("$\(priceString)", forType: .string)
+
+                        print("✅ 已复制 \(symbol.displayName) 价格到剪贴板: $\(priceString)")
+                    } else {
+                        print("❌ 无法获取 \(symbol.displayName) 价格")
+                    }
+                }
+            } else {
+                let priceString = formatPriceWithCommas(price)
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString("$\(priceString)", forType: .string)
+
+                print("✅ 已复制 \(symbol.displayName) 价格到剪贴板: $\(priceString)")
             }
         } else {
-            // 默认行为：选择该币种
+            // 选择该币种
             appSettings.saveSelectedSymbol(symbol)
-            print("✅ 币种已更新为: \(symbol.pairDisplayName)")
+            print("✅ 币种已更新为: \(symbol.displayName)")
         }
     }
 
@@ -413,10 +409,42 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         • 支持手动刷新 (Cmd+R)
         • 智能错误重试机制
         • 优雅的SF Symbols图标
+        
+        💡 TIPS：
+        • 点击币种名称为切换主菜单栏显示
+        • Option + 鼠标左键复制价格
         """
         alert.alertStyle = .informational
         alert.addButton(withTitle: "确定")
         alert.runModal()
+    }
+
+    // 重置设置为默认值（仅在 Debug 模式下可用）
+    @objc private func resetSettings() {
+        #if DEBUG
+        let alert = NSAlert()
+        alert.messageText = "重置设置"
+        alert.informativeText = "确定要将所有设置重置为默认值吗？\n\n• 币种：BTC\n• 刷新间隔：30秒"
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "确定")
+        alert.addButton(withTitle: "取消")
+
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            // 重置设置
+            appSettings.resetToDefaults()
+
+            // 显示确认消息
+            let confirmAlert = NSAlert()
+            confirmAlert.messageText = "重置完成"
+            confirmAlert.informativeText = "所有设置已重置为默认值，应用将立即生效。"
+            confirmAlert.alertStyle = .informational
+            confirmAlert.addButton(withTitle: "确定")
+            confirmAlert.runModal()
+
+            print("🔧 [BTCMenuBarApp] 用户手动重置了所有设置")
+        }
+        #endif
     }
 
     // 打开GitHub页面
@@ -445,42 +473,7 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         return version
     }
 
-    // 显示价格复制通知
-    private func showCopyNotification(symbol: CryptoSymbol, price: String) async {
-        let center = UNUserNotificationCenter.current()
-        
-        // 请求通知权限（如果尚未授权）
-        do {
-            let granted = try await center.requestAuthorization(options: [.alert, .sound])
-            if !granted {
-                return // 用户拒绝了通知权限
-            }
-        } catch {
-            print("❌ 通知权限请求失败: \(error)")
-            return
-        }
-        
-        // 创建通知内容
-        let content = UNMutableNotificationContent()
-        content.title = "价格已复制"
-        content.body = "\(symbol.displayName): $\(price)"
-        content.sound = .default
-        
-        // 创建通知请求
-        let request = UNNotificationRequest(
-            identifier: "price-copied-\(Date().timeIntervalSince1970)",
-            content: content,
-            trigger: nil // 立即显示
-        )
-        
-        // 发送通知
-        do {
-            try await center.add(request)
-        } catch {
-            print("❌ 通知发送失败: \(error)")
-        }
-    }
-
+    
     // 退出应用
     @objc private func quitApp() {
         NSApplication.shared.terminate(nil)
