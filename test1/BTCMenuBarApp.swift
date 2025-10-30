@@ -1,6 +1,6 @@
 //
 //  BTCMenuBarApp.swift
-//  test1
+//  Bitcoin Monitoring
 //
 //  Created by Mark on 2025/10/28.
 //
