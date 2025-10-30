@@ -1,7 +1,7 @@
 # BTC 价格监控器
 
 <div align="center">
-
+   
 [![BTC Icon](https://img.shields.io/badge/BTC-Bitcoin-orange&logo=bitcoin&logoColor=white)](#)
 [![platform](https://img.shields.io/badge/platform-macOS-000000?logo=apple&logoColor=white)](#)
 [![macOS](https://img.shields.io/badge/macOS-13.1+-blue&logo=apple)](#)
@@ -9,10 +9,9 @@
 [![swift](https://img.shields.io/badge/Swift-5.7%2B-FA7343?logo=swift&logoColor=white)](#)
 [![ui](https://img.shields.io/badge/SwiftUI-%2B%20AppKit-43a047)](#)
 [![license](https://img.shields.io/badge/License-GPL%20v3-44CC11)](#license)
+</div>
 
 一款 macOS 原生菜单栏应用，用于实时监控主流加密货币的价格，支持 BTC/ETH/BNB/SOL/DOGE 多种币种。基于 Swift 编写，致力于打造一款高性能、极简风格的应用APP，已经编译了`Intel`与`Apple Silicon`的通用应用，请至[releases](https://github.com/jiayouzl/Bitcoin-Monitoring/releases/latest)下载。
-
-</div>
 
 ## 📖 如在macOS下无法运行，请执行以下步骤：
 > 系统设置 → 隐私与安全性 → 安全性 → 已阻止“Bitcoin Monitoring.app”以保护Mac → 仍要打开
