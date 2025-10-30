@@ -53,7 +53,7 @@ struct AboutWindowView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     FeatureRow(icon: "chart.line.uptrend.xyaxis", title: "实时价格监控", description: "支持 BTC/ETH/BNB/SOL/DOGE")
 
-                    FeatureRow(icon: "timer", title: "可配置刷新间隔", description: "当前：\(currentRefreshInterval)")
+                    FeatureRow(icon: "timer", title: "可自定义刷新间隔", description: "当前：\(currentRefreshInterval)")
 
                     FeatureRow(icon: "exclamationmark.triangle.fill", title: "智能重试机制", description: "网络错误自动恢复")
 
@@ -74,8 +74,8 @@ struct AboutWindowView: View {
                 }
             }
 
-            Spacer()
-                .frame(height: 10) // 减少间距，让按钮上移
+//            Spacer()
+//                .frame(height: 10) // 减少间距，让按钮上移
 
             // 按钮区域
             HStack(spacing: 12) {
@@ -100,7 +100,7 @@ struct AboutWindowView: View {
             }
         }
         .padding(24)
-        .frame(width: 420, height: 540) // 减少窗口高度，适应按钮上移
+        .frame(width: 420, height: 500)
     }
 
     /**
