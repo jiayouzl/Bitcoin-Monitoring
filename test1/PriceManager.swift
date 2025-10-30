@@ -238,4 +238,31 @@ class PriceManager: ObservableObject {
     func getCurrentRefreshInterval() -> RefreshInterval {
         return RefreshInterval.allCases.first { $0.rawValue == currentRefreshInterval } ?? .thirtySeconds
     }
+    
+    /// 并发获取所有支持币种的价格（用于菜单一次性显示全部币种）
+    func fetchAllPrices() async -> [CryptoSymbol: (price: Double?, errorMessage: String?)] {
+        var results = [CryptoSymbol: (Double?, String?)]()
+
+        await withTaskGroup(of: (CryptoSymbol, Double?, String?).self) { group in
+            for symbol in CryptoSymbol.allCases {
+                group.addTask { [weak self] in
+                    guard let self = self else { return (symbol, nil, "内部错误") }
+                    do {
+                        let price = try await self.priceService.fetchPrice(for: symbol)
+                        return (symbol, price, nil)
+                    } catch let error as PriceError {
+                        return (symbol, nil, error.localizedDescription)
+                    } catch {
+                        return (symbol, nil, "网络错误：\(error.localizedDescription)")
+                    }
+                }
+            }
+
+            for await (symbol, price, errorMsg) in group {
+                results[symbol] = (price, errorMsg)
+            }
+        }
+
+        return results
+    }
 }

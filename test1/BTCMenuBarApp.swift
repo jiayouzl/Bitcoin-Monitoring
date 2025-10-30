@@ -145,13 +145,35 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         let menu = NSMenu()
 
         // 添加价格信息项（带币种图标）
-        let priceItem = NSMenuItem(title: priceManager.formattedPrice, action: nil, keyEquivalent: "")
-        if let symbolImage = symbolImage(for: priceManager.selectedSymbol) {
-            symbolImage.size = NSSize(width: 16, height: 16)
-            priceItem.image = symbolImage
+        // 我们将为每一个支持的币种添加一个菜单项，并在后台异步填充它们的价格
+        var symbolMenuItems: [CryptoSymbol: NSMenuItem] = [:]
+        for symbol in CryptoSymbol.allCases {
+            let placeholderTitle = "\(symbol.displayName): 加载中..."
+            let item = NSMenuItem(title: placeholderTitle, action: nil, keyEquivalent: "")
+            if let icon = symbolImage(for: symbol) {
+                icon.size = NSSize(width: 16, height: 16)
+                item.image = icon
+            }
+            item.isEnabled = false
+            menu.addItem(item)
+            symbolMenuItems[symbol] = item
         }
-        priceItem.isEnabled = false
-        menu.addItem(priceItem)
+
+        // 异步并发获取所有币种价格并更新对应的菜单项
+        Task { @MainActor in
+            let results = await self.priceManager.fetchAllPrices()
+            for symbol in CryptoSymbol.allCases {
+                guard let (priceOpt, errorOpt) = results[symbol], let menuItem = symbolMenuItems[symbol] else { continue }
+                if let price = priceOpt {
+                    menuItem.title = "\(symbol.displayName): $\(self.formatPriceWithCommas(price))"
+                } else if let error = errorOpt {
+                    menuItem.title = "\(symbol.displayName): 错误"
+                    menuItem.toolTip = error
+                } else {
+                    menuItem.title = "\(symbol.displayName): 加载中..."
+                }
+            }
+        }
 
         // 如果有错误，显示错误信息（带错误图标）
         if let errorMessage = priceManager.errorMessage {
