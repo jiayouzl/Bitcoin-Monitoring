@@ -163,9 +163,8 @@ struct PreferencesWindowView: View {
                     HStack {
                         if isSaving {
                             ProgressView()
-                                .scaleEffect(0.6)
-                                .frame(width: 12, height: 12)
-
+                                .scaleEffect(0.4)
+                                .frame(width: 8, height: 8)
                         }
                         Text("保存")
                     }
