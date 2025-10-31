@@ -205,7 +205,7 @@ struct AboutWindowView: View {
                     self.showingUpdateAlert = true
                     print("✅ 已是最新版本")
                 case .orderedAscending:
-                    self.updateAlertMessage = "🆕 发现新版本！\n当前版本：\(self.appVersion)\n最新版本：\(latestVersion)\n\n点击确定后将自动打开GitHub发布页面。"
+                    self.updateAlertMessage = "🆕 发现新版本！\n当前版本：\(self.appVersion)\n最新版本：\(latestVersion)\n\n点击确定后将打开GitHub发布页面。"
                     self.showingUpdateAlert = true
                     print("🆕 发现新版本: \(latestVersion)")
                 case .orderedDescending:

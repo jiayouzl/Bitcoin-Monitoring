@@ -1,7 +1,6 @@
 # BTC 价格监控器
 
 <div align="center">
-   
 [![BTC Icon](https://img.shields.io/badge/BTC-Bitcoin-orange&logo=bitcoin&logoColor=white)](#)
 [![platform](https://img.shields.io/badge/platform-macOS-000000?logo=apple&logoColor=white)](#)
 [![macOS](https://img.shields.io/badge/macOS-13.1+-blue&logo=apple)](#)
@@ -9,6 +8,7 @@
 [![swift](https://img.shields.io/badge/Swift-5.7%2B-FA7343?logo=swift&logoColor=white)](#)
 [![ui](https://img.shields.io/badge/SwiftUI-%2B%20AppKit-43a047)](#)
 [![license](https://img.shields.io/badge/License-GPL%20v3-44CC11)](#license)
+
 </div>
 
 一款 macOS 原生菜单栏应用，用于实时监控主流加密货币的价格，支持 BTC/ETH/BNB/SOL/DOGE 多种币种。基于 Swift 编写，致力于打造一款高性能、极简风格的应用APP，已经编译了`Intel`与`Apple Silicon`的通用应用，请至[releases](https://github.com/jiayouzl/Bitcoin-Monitoring/releases/latest)下载。
@@ -18,7 +18,10 @@
 
 ## 📷︎ 界面预览
 
-![](./assets/iShot_2025-10-31_07.04.02@378×431.png)
+![](./assets/iShot_2025-10-31_20.10.16@600×625.png)
+
+##  macOS 26 新特性液态玻璃
+![](./assets/0jiq7Pw.gif)
 
 ## ✨ 功能特性
 
@@ -39,6 +42,9 @@
 - **轻量级设计**: 最小化系统资源占用
 - **后台运行**: 不占用 Dock 空间，专注菜单栏
 - **SF Symbols 图标**: 使用原生 macOS 图标系统
+- **现代化偏好设置**: 采用 macOS 原生风格的偏好设置界面
+- **精美开关控件**: 使用 macOS 系统风格的椭圆形 Switch 控件
+- **响应式布局**: 智能适配不同窗口尺寸和显示设置
 
 ### 🛡️ 可靠性
 - **网络容错**: 完善的网络异常处理机制
@@ -128,8 +134,10 @@ xcodebuild -project "Bitcoin Monitoring.xcodeproj" -scheme "Bitcoin Monitoring" 
 | 错误信息 | 显示网络错误详情 (如有) | - |
 | 更新时间 | 显示上次成功更新时间 | - |
 | 刷新价格 | 手动获取最新价格 | `Cmd+R` |
+| 偏好设置 | 打开偏好设置窗口配置应用 | `Cmd+,` |
 | 刷新设置 | 设置刷新的间隔 | - |
 | 开机启动 | 设置开机自动启动APP | - |
+| 代理设置 | 配置 HTTP 代理服务器 | - |
 | GitHub | 打开仓库查询更新 | - |
 | 关于 | 查看应用信息和版本 | - |
 | 退出 | 完全退出应用 | `Cmd+Q` |
@@ -143,6 +151,40 @@ xcodebuild -project "Bitcoin Monitoring.xcodeproj" -scheme "Bitcoin Monitoring" 
 | 错误 | `错误` | 网络连接或 API 异常 |
 | 正常 | `$价格` | 成功显示当前价格 |
 
+### ⚙️ 偏好设置
+
+偏好设置窗口提供了完整的应用配置选项：
+
+#### 访问方式
+- **菜单路径**: 点击菜单栏图标 → 偏好设置
+- **快捷键**: `Cmd+,`
+
+#### 设置选项
+
+1. **刷新设置**
+   - **5秒**: 高频刷新，适合交易场景
+   - **10秒**: 平衡模式，推荐日常使用
+   - **30秒**: 节能模式，减少网络请求
+   - **60秒**: 低频刷新，最小化资源占用
+
+2. **启动设置**
+   - **开机自启动**: 系统启动时自动运行应用
+   - 开关采用 macOS 原生椭圆形 Switch 控件
+   - 设置立即生效，重启系统后保持
+
+3. **代理设置**
+   - **HTTP代理**: 配置网络代理服务器
+   - **服务器地址**: 输入代理服务器域名或IP
+   - **端口**: 设置代理服务器端口 (1-65535)
+   - **连接测试**: 验证代理配置是否有效
+   - 支持企业网络环境下的代理访问
+
+#### 界面特性
+- **现代化设计**: 采用 macOS 系统设置风格
+- **分组布局**: 功能模块清晰分组
+- **智能验证**: 输入自动验证和错误提示
+- **即时保存**: 设置更改立即保存生效
+
 ### 💡 使用技巧
 
 - **快速复制**: 按住 `Option` 键点击币种名称可立即复制当前价格
@@ -150,6 +192,7 @@ xcodebuild -project "Bitcoin Monitoring.xcodeproj" -scheme "Bitcoin Monitoring" 
 - **手动刷新**: 使用 `Cmd+R` 快捷键立即更新价格数据
 - **配置持久化**: 更改的刷新间隔和币种选择会自动保存，重启应用后保持设置
 - **错误恢复**: 网络异常时应用会自动重试，无需手动干预
+- **偏好设置**: 使用 `Cmd+,` 快捷键快速打开偏好设置窗口
 
 ## 🏗️ 技术架构
 
@@ -160,6 +203,14 @@ xcodebuild -project "Bitcoin Monitoring.xcodeproj" -scheme "Bitcoin Monitoring" 
 - **依赖注入**: 服务层分离和松耦合设计
 - **观察者模式**: 价格变化的响应式更新
 - **策略模式**: 可配置的刷新间隔选项
+
+### UI 组件架构
+
+- **现代化界面设计**: 采用 macOS 原生设计语言
+- **Switch 控件**: 使用 `.toggleStyle(.switch)` 和 `.controlSize(.mini)` 实现精美开关
+- **响应式布局**: HStack + VStack 实现灵活的界面布局
+- **分组视图**: 自定义 `SettingsGroupView` 组件实现功能分组
+- **配置管理**: `AppSettings` 类统一管理用户偏好设置
 
 ### 并发处理
 

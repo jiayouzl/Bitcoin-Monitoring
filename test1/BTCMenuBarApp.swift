@@ -286,6 +286,8 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         }
         preferencesItem.target = self
         menu.addItem(preferencesItem)
+        
+        menu.addItem(NSMenuItem.separator())
 
         #if DEBUG
         // 添加重置设置按钮（仅在 Debug 模式下显示）
