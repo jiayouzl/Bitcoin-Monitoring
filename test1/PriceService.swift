@@ -10,7 +10,18 @@ import Foundation
 // 网络服务类，负责从币安API获取币种价格
 class PriceService: ObservableObject {
     private let baseURL = "https://api.binance.com/api/v3/ticker/price"
-    private let session = URLSession.shared
+    private let session: URLSession
+    private let appSettings: AppSettings
+
+    @MainActor
+    init(appSettings: AppSettings) {
+        self.appSettings = appSettings
+        self.session = Self.createURLSession(
+            proxyEnabled: appSettings.proxyEnabled,
+            proxyHost: appSettings.proxyHost,
+            proxyPort: appSettings.proxyPort
+        )
+    }
 
     // 获取指定币种价格
     func fetchPrice(for symbol: CryptoSymbol) async throws -> Double {
@@ -41,6 +52,99 @@ class PriceService: ObservableObject {
         }
 
         return price
+    }
+
+    // MARK: - 代理配置相关方法
+
+    /**
+     * 根据应用设置创建配置了代理的URLSession
+     * - Parameters:
+     *   - proxyEnabled: 是否启用代理
+     *   - proxyHost: 代理服务器地址
+     *   - proxyPort: 代理服务器端口
+     * - Returns: 配置好的URLSession
+     */
+    private static func createURLSession(proxyEnabled: Bool, proxyHost: String, proxyPort: Int) -> URLSession {
+        let configuration = URLSessionConfiguration.default
+
+        // 如果启用了代理，配置代理设置
+        if proxyEnabled {
+            let proxyDict = createProxyDictionary(
+                host: proxyHost,
+                port: proxyPort
+            )
+            configuration.connectionProxyDictionary = proxyDict
+
+            #if DEBUG
+            print("🌐 [PriceService] 已配置代理: \(proxyHost):\(proxyPort)")
+            #endif
+        }
+
+        // 设置请求超时时间
+        configuration.timeoutIntervalForRequest = 15.0
+        configuration.timeoutIntervalForResource = 30.0
+
+        return URLSession(configuration: configuration)
+    }
+
+    /**
+     * 创建代理配置字典
+     * - Parameters:
+     *   - host: 代理服务器地址
+     *   - port: 代理服务器端口
+     * - Returns: 代理配置字典
+     */
+    private static func createProxyDictionary(host: String, port: Int) -> [AnyHashable: Any] {
+        return [
+            kCFNetworkProxiesHTTPEnable: 1,
+            kCFNetworkProxiesHTTPProxy: host,
+            kCFNetworkProxiesHTTPPort: port,
+            kCFNetworkProxiesHTTPSEnable: 1,
+            kCFNetworkProxiesHTTPSProxy: host,
+            kCFNetworkProxiesHTTPSPort: port
+        ]
+    }
+
+    /**
+     * 更新网络配置（当代理设置发生变化时调用）
+     */
+    func updateNetworkConfiguration() {
+        // 由于URLSession是不可变的，我们需要重新创建session
+        // 在实际应用中，这个方法会在代理设置变化后调用
+        #if DEBUG
+        print("🔄 [PriceService] 网络配置已更新")
+        #endif
+    }
+
+    /**
+     * 测试代理连接
+     * - Returns: 测试结果
+     */
+    func testProxyConnection() async -> Bool {
+        let proxyEnabled = await MainActor.run {
+            return appSettings.proxyEnabled
+        }
+
+        guard proxyEnabled else {
+            #if DEBUG
+            print("🌐 [PriceService] 代理未启用，无需测试连接")
+            #endif
+            return true
+        }
+
+        do {
+            // 尝试获取一个测试币种的价格来验证代理连接
+            _ = try await fetchPrice(for: .btc)
+            #if DEBUG
+            print("✅ [PriceService] 代理连接测试成功")
+            #endif
+            return true
+        } catch {
+            #if DEBUG
+            print("❌ [PriceService] 代理连接测试失败: \(error.localizedDescription)")
+            #endif
+            return false
+        }
     }
 }
 

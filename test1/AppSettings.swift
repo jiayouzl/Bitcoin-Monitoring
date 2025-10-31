@@ -22,13 +22,28 @@ class AppSettings: ObservableObject {
     @Published var selectedSymbol: CryptoSymbol = .btc
     /// 是否开机自启动
     @Published var launchAtLogin: Bool = false
-    
+
+    // MARK: - 代理设置相关属性
+
+    /// 是否启用代理
+    @Published var proxyEnabled: Bool = false
+    /// 代理服务器地址
+    @Published var proxyHost: String = ""
+    /// 代理服务器端口
+    @Published var proxyPort: Int = 8080
+
     // MARK: - Private Properties
 
     private let defaults = UserDefaults.standard
     private let refreshIntervalKey = "BTCRefreshInterval"
     private let selectedSymbolKey = "SelectedCryptoSymbol"
     private let launchAtLoginKey = "LaunchAtLogin"
+
+    // MARK: - 代理配置键值
+
+    private let proxyEnabledKey = "ProxyEnabled"
+    private let proxyHostKey = "ProxyHost"
+    private let proxyPortKey = "ProxyPort"
 
     // MARK: - Initialization
 
@@ -108,11 +123,17 @@ class AppSettings: ObservableObject {
         // 加载开机自启动设置
         launchAtLogin = defaults.bool(forKey: launchAtLoginKey)
 
+        // 加载代理设置
+        proxyEnabled = defaults.bool(forKey: proxyEnabledKey)
+        proxyHost = defaults.string(forKey: proxyHostKey) ?? ""
+        proxyPort = defaults.integer(forKey: proxyPortKey)
+        if proxyPort == 0 { proxyPort = 8080 } // 默认端口
+
         // 检查实际的自启动状态并同步
         checkAndSyncLaunchAtLoginStatus()
 
         #if DEBUG
-        print("🔧 [AppSettings] 配置加载完成 - 刷新间隔: \(refreshInterval.displayText), 币种: \(selectedSymbol.displayName), 开机自启动: \(launchAtLogin)")
+        print("🔧 [AppSettings] 配置加载完成 - 刷新间隔: \(refreshInterval.displayText), 币种: \(selectedSymbol.displayName), 开机自启动: \(launchAtLogin), 代理: \(proxyEnabled ? "\(proxyHost):\(proxyPort)" : "未启用")")
         #endif
     }
 
@@ -130,8 +151,16 @@ class AppSettings: ObservableObject {
         saveRefreshInterval(.thirtySeconds)
         saveSelectedSymbol(.btc)
 
+        // 重置代理设置
+        proxyEnabled = false
+        proxyHost = ""
+        proxyPort = 8080
+        defaults.set(false, forKey: proxyEnabledKey)
+        defaults.set("", forKey: proxyHostKey)
+        defaults.set(8080, forKey: proxyPortKey)
+
         #if DEBUG
-        print("🔧 [AppSettings] 重置完成 - 刷新间隔: \(refreshInterval.displayText), 币种: \(selectedSymbol.displayName)")
+        print("🔧 [AppSettings] 重置完成 - 刷新间隔: \(refreshInterval.displayText), 币种: \(selectedSymbol.displayName), 代理: 已重置")
         #endif
 
         // 重置开机自启动设置
@@ -157,6 +186,76 @@ class AppSettings: ObservableObject {
         print("🔧 [AppSettings] 保存币种配置: \(symbol.displayName) (\(symbol.rawValue))")
         #endif
         defaults.set(symbol.rawValue, forKey: selectedSymbolKey)
+    }
+
+    // MARK: - 代理设置相关方法
+
+    /// 保存代理设置
+    /// - Parameters:
+    ///   - enabled: 是否启用代理
+    ///   - host: 代理服务器地址
+    ///   - port: 代理服务器端口
+    func saveProxySettings(enabled: Bool, host: String, port: Int) {
+        proxyEnabled = enabled
+        proxyHost = host.trimmingCharacters(in: .whitespacesAndNewlines)
+        proxyPort = port
+
+        // 保存到 UserDefaults
+        defaults.set(enabled, forKey: proxyEnabledKey)
+        defaults.set(proxyHost, forKey: proxyHostKey)
+        defaults.set(port, forKey: proxyPortKey)
+
+        #if DEBUG
+        if enabled {
+            print("🔧 [AppSettings] 保存代理设置: \(proxyHost):\(proxyPort)")
+        } else {
+            print("🔧 [AppSettings] 保存代理设置: 已禁用")
+        }
+        #endif
+    }
+
+    /// 验证代理设置是否有效
+    /// - Returns: 验证结果和错误信息
+    func validateProxySettings() -> (isValid: Bool, errorMessage: String?) {
+        guard proxyEnabled else {
+            return (true, nil) // 代理未启用，无需验证
+        }
+
+        let trimmedHost = proxyHost.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // 验证服务器地址
+        if trimmedHost.isEmpty {
+            return (false, "代理服务器地址不能为空")
+        }
+
+        // 简单的IP地址或域名格式验证
+        if !isValidHost(trimmedHost) {
+            return (false, "代理服务器地址格式不正确")
+        }
+
+        // 验证端口范围
+        if proxyPort < 1 || proxyPort > 65535 {
+            return (false, "代理端口必须在 1-65535 范围内")
+        }
+
+        return (true, nil)
+    }
+
+    /// 验证主机地址格式
+    /// - Parameter host: 主机地址
+    /// - Returns: 是否为有效格式
+    private func isValidHost(_ host: String) -> Bool {
+        // 简单的IP地址验证
+        if host.matches(pattern: #"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"#) {
+            return true
+        }
+
+        // 简单的域名验证
+        if host.matches(pattern: #"^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$"#) {
+            return true
+        }
+
+        return false
     }
 
     // MARK: - 开机自启动相关方法
@@ -234,5 +333,21 @@ class AppSettings: ObservableObject {
 
         let actualStatus = SMAppService.mainApp.status
         return actualStatus == .enabled
+    }
+}
+
+// MARK: - String Extension for Regex Matching
+
+extension String {
+    /// 检查字符串是否匹配给定的正则表达式模式
+    /// - Parameter pattern: 正则表达式模式
+    /// - Returns: 是否匹配
+    func matches(pattern: String) -> Bool {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else {
+            return false
+        }
+
+        let range = NSRange(location: 0, length: self.utf16.count)
+        return regex.firstMatch(in: self, options: [], range: range) != nil
     }
 }

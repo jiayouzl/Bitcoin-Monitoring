@@ -16,12 +16,13 @@ class PriceManager: ObservableObject {
     @Published var lastError: PriceError?
     @Published var selectedSymbol: CryptoSymbol
     
-    private let priceService = PriceService()
+    private let priceService: PriceService
     private var timer: Timer?
     private var currentRefreshInterval: TimeInterval = RefreshInterval.thirtySeconds.rawValue // 当前刷新间隔
 
-    init(initialSymbol: CryptoSymbol = .btc) {
+    init(initialSymbol: CryptoSymbol = .btc, appSettings: AppSettings) {
         selectedSymbol = initialSymbol
+        self.priceService = PriceService(appSettings: appSettings)
         startPriceUpdates()
     }
 
