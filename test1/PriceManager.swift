@@ -278,4 +278,10 @@ class PriceManager: ObservableObject {
             return nil
         }
     }
+
+    /// 更新网络配置（当代理设置发生变化时调用）
+    @MainActor
+    func updateNetworkConfiguration() {
+        priceService.updateNetworkConfiguration()
+    }
 }

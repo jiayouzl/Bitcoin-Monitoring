@@ -155,7 +155,7 @@ struct AboutWindowView: View {
         }
         .padding(24)
         .frame(width: 420, height: 500)
-        .alert("更新检测", isPresented: $showingUpdateAlert) {
+        .alert("检测更新", isPresented: $showingUpdateAlert) {
             Button("确定", role: .cancel) {
                 // 如果消息中包含"发现新版本"，则打开发布页面并关闭窗口
                 if updateAlertMessage.contains("发现新版本") {

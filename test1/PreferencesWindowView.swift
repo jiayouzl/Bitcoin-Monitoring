@@ -165,6 +165,7 @@ struct PreferencesWindowView: View {
                             ProgressView()
                                 .scaleEffect(0.6)
                                 .frame(width: 12, height: 12)
+
                         }
                         Text("保存")
                     }
@@ -177,7 +178,7 @@ struct PreferencesWindowView: View {
             .padding(.horizontal, 24)
             .padding(.vertical, 16)
         }
-        .frame(width: 480, height: 600)
+        .frame(width: 480, height: 590)
         .alert("配置验证", isPresented: $showingValidationError) {
             Button("确定", role: .cancel) { }
         } message: {

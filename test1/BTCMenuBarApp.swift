@@ -50,6 +50,27 @@ class BTCMenuBarApp: NSObject, ObservableObject {
                 self.updateMenuBarTitle(price: self.priceManager.currentPrice)
             }
             .store(in: &cancellables)
+
+        // 监听代理设置变化
+        appSettings.$proxyEnabled
+            .sink { [weak self] _ in
+                self?.updateProxyConfiguration()
+            }
+            .store(in: &cancellables)
+
+        // 监听代理主机变化
+        appSettings.$proxyHost
+            .sink { [weak self] _ in
+                self?.updateProxyConfiguration()
+            }
+            .store(in: &cancellables)
+
+        // 监听代理端口变化
+        appSettings.$proxyPort
+            .sink { [weak self] _ in
+                self?.updateProxyConfiguration()
+            }
+            .store(in: &cancellables)
     }
 
     // 设置菜单栏
@@ -133,8 +154,23 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         formatter.maximumFractionDigits = 4
         formatter.groupingSeparator = ","
         formatter.usesGroupingSeparator = true
-        
+
         return formatter.string(from: NSNumber(value: price)) ?? String(format: "%.4f", price)
+    }
+
+    // 更新代理配置
+    private func updateProxyConfiguration() {
+        #if DEBUG
+        print("🔄 [BTCMenuBarApp] 检测到代理设置变化，正在更新网络配置...")
+        #endif
+
+        // 更新 PriceService 的网络配置
+        priceManager.updateNetworkConfiguration()
+
+        #if DEBUG
+        let proxyStatus = appSettings.proxyEnabled ? "已启用 (\(appSettings.proxyHost):\(appSettings.proxyPort))" : "已禁用"
+        print("✅ [BTCMenuBarApp] 代理配置更新完成: \(proxyStatus)")
+        #endif
     }
 
     // 菜单栏点击事件
@@ -184,10 +220,10 @@ class BTCMenuBarApp: NSObject, ObservableObject {
                     menuItem.isEnabled = true // 启用菜单项，允许用户交互
                     menuItem.target = self // 确保target正确设置
                     menuItem.representedObject = ["symbol": symbol, "price": price]
-                } else if let error = errorOpt {
+                } else if errorOpt != nil {
                     let title = isCurrent ? "✓ \(symbol.displayName): 错误" : "  \(symbol.displayName): 错误"
                     menuItem.title = title
-                    menuItem.toolTip = error
+                    // 已删除悬浮提示，避免网络错误时显示悬浮提示
                     menuItem.isEnabled = false // 有错误时禁用交互
                     menuItem.target = self // 确保target正确设置
                 } else {

@@ -10,7 +10,7 @@ import Foundation
 // 网络服务类，负责从币安API获取币种价格
 class PriceService: ObservableObject {
     private let baseURL = "https://api.binance.com/api/v3/ticker/price"
-    private let session: URLSession
+    private var session: URLSession // 改为 var 以便重新创建
     private let appSettings: AppSettings
 
     @MainActor
@@ -108,11 +108,24 @@ class PriceService: ObservableObject {
     /**
      * 更新网络配置（当代理设置发生变化时调用）
      */
+    @MainActor
     func updateNetworkConfiguration() {
-        // 由于URLSession是不可变的，我们需要重新创建session
-        // 在实际应用中，这个方法会在代理设置变化后调用
+        // 获取代理设置值（在 MainActor 上下文中）
+        let proxyEnabled = appSettings.proxyEnabled
+        let proxyHost = appSettings.proxyHost
+        let proxyPort = appSettings.proxyPort
+
+        // 重新创建 URLSession 以应用新的代理设置
+        let newSession = Self.createURLSession(
+            proxyEnabled: proxyEnabled,
+            proxyHost: proxyHost,
+            proxyPort: proxyPort
+        )
+
+        self.session = newSession
+
         #if DEBUG
-        print("🔄 [PriceService] 网络配置已更新")
+        print("🔄 [PriceService] 网络配置已更新 - 代理: \(proxyEnabled ? "\(proxyHost):\(proxyPort)" : "未启用")")
         #endif
     }
 
