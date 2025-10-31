@@ -86,6 +86,8 @@ struct PreferencesWindowView: View {
 
                                 Toggle("", isOn: $tempLaunchAtLogin)
                                     .labelsHidden()
+                                    .toggleStyle(.switch)
+                                    .controlSize(.mini)
                             }
                         }
                     }
@@ -103,6 +105,8 @@ struct PreferencesWindowView: View {
 
                                 Toggle("", isOn: $tempProxyEnabled)
                                     .labelsHidden()
+                                    .toggleStyle(.switch)
+                                    .controlSize(.mini)
                             }
 
                             // 代理配置输入框 - 始终显示
