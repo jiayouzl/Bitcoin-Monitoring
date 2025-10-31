@@ -1,6 +1,7 @@
 # BTC 价格监控器
 
 <div align="center">
+
 [![BTC Icon](https://img.shields.io/badge/BTC-Bitcoin-orange&logo=bitcoin&logoColor=white)](#)
 [![platform](https://img.shields.io/badge/platform-macOS-000000?logo=apple&logoColor=white)](#)
 [![macOS](https://img.shields.io/badge/macOS-13.1+-blue&logo=apple)](#)
