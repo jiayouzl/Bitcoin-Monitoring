@@ -105,40 +105,39 @@ struct PreferencesWindowView: View {
                                     .labelsHidden()
                             }
 
-                            if tempProxyEnabled {
-                                // 代理配置输入框
-                                VStack(alignment: .leading, spacing: 12) {
-                                    Text("代理服务器配置")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
+                            // 代理配置输入框 - 始终显示
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("代理服务器配置")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
 
-                                    HStack(spacing: 12) {
-                                        // 服务器地址
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text("服务器地址")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
+                                HStack(spacing: 12) {
+                                    // 服务器地址
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("服务器地址")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
 
-                                            TextField("例如: proxy.example.com", text: $tempProxyHost)
-                                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                                .frame(maxWidth: .infinity)
-                                        }
+                                        TextField("例如: proxy.example.com", text: $tempProxyHost)
+                                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                                            .frame(maxWidth: .infinity)
+                                            .disabled(!tempProxyEnabled)
+                                    }
 
-                                        // 端口
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text("端口")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
+                                    // 端口
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("端口")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
 
-                                            TextField("8080", text: $tempProxyPort)
-                                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                                .frame(width: 80)
-                                        }
+                                        TextField("8080", text: $tempProxyPort)
+                                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                                            .frame(width: 80)
+                                            .disabled(!tempProxyEnabled)
                                     }
                                 }
-                                .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                                .animation(.easeInOut(duration: 0.2), value: tempProxyEnabled)
                             }
+                            .opacity(tempProxyEnabled ? 1.0 : 0.6) // 视觉反馈显示开关状态
                         }
                     }
 
@@ -178,7 +177,7 @@ struct PreferencesWindowView: View {
             .padding(.horizontal, 24)
             .padding(.vertical, 16)
         }
-        .frame(width: 480, height: 520)
+        .frame(width: 480, height: 600)
         .alert("配置验证", isPresented: $showingValidationError) {
             Button("确定", role: .cancel) { }
         } message: {
@@ -310,30 +309,31 @@ struct IntervalSelectionButton: View {
     let onSelect: () -> Void
 
     var body: some View {
-        Button(action: onSelect) {
-            HStack {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 14))
-                    .foregroundColor(isSelected ? .blue : .secondary)
+        HStack {
+            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 14))
+                .foregroundColor(isSelected ? .blue : .secondary)
 
-                Text(interval.displayText)
-                    .font(.system(size: 13))
-                    .fontWeight(isSelected ? .medium : .regular)
+            Text(interval.displayText)
+                .font(.system(size: 13))
+                .fontWeight(isSelected ? .medium : .regular)
 
-                Spacer()
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? Color.blue.opacity(0.1) : Color.clear)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(isSelected ? Color.blue : Color(NSColor.separatorColor), lineWidth: 1)
-            )
+            Spacer()
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isSelected ? Color.blue.opacity(0.1) : Color.clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(isSelected ? Color.blue : Color(NSColor.separatorColor), lineWidth: 1)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 6)) // 确保整个区域可点击
+        .onTapGesture {
+            onSelect()
+        }
     }
 }
 
