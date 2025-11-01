@@ -23,11 +23,19 @@ struct PreferencesWindowView: View {
     @State private var tempProxyEnabled: Bool
     @State private var tempProxyHost: String
     @State private var tempProxyPort: String
+    @State private var tempProxyUsername: String
+    @State private var tempProxyPassword: String
     @State private var tempLaunchAtLogin: Bool
 
     // 验证状态
     @State private var showingValidationError = false
     @State private var validationErrorMessage = ""
+
+    // 代理测试状态
+    @State private var isTestingProxy = false
+    @State private var showingProxyTestResult = false
+    @State private var proxyTestResultMessage = ""
+    @State private var proxyTestSucceeded = false
 
     // 保存状态
     @State private var isSaving = false
@@ -41,6 +49,8 @@ struct PreferencesWindowView: View {
         self._tempProxyEnabled = State(initialValue: appSettings.proxyEnabled)
         self._tempProxyHost = State(initialValue: appSettings.proxyHost)
         self._tempProxyPort = State(initialValue: String(appSettings.proxyPort))
+        self._tempProxyUsername = State(initialValue: appSettings.proxyUsername)
+        self._tempProxyPassword = State(initialValue: appSettings.proxyPassword)
         self._tempLaunchAtLogin = State(initialValue: appSettings.launchAtLogin)
     }
 
@@ -115,6 +125,7 @@ struct PreferencesWindowView: View {
                                     .font(.caption)
                                     .foregroundColor(.secondary)
 
+                                // 服务器地址和端口
                                 HStack(spacing: 12) {
                                     // 服务器地址
                                     VStack(alignment: .leading, spacing: 4) {
@@ -139,6 +150,62 @@ struct PreferencesWindowView: View {
                                             .frame(width: 80)
                                             .disabled(!tempProxyEnabled)
                                     }
+                                }
+
+                                // 认证配置
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("认证设置 (可选)")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+
+                                    HStack(spacing: 12) {
+                                        // 用户名
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("用户名")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+
+                                            TextField("用户名", text: $tempProxyUsername)
+                                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                                .frame(maxWidth: .infinity)
+                                                .disabled(!tempProxyEnabled)
+                                        }
+
+                                        // 密码
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("密码")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+
+                                            SecureField("密码", text: $tempProxyPassword)
+                                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                                .frame(maxWidth: .infinity)
+                                                .disabled(!tempProxyEnabled)
+                                        }
+                                    }
+                                }
+
+                                // 测试按钮
+                                HStack {
+                                    Spacer()
+
+                                    Button(action: testProxyConnection) {
+                                        HStack {
+                                            if isTestingProxy {
+                                                ProgressView()
+                                                    .scaleEffect(0.4)
+                                                    .frame(width: 8, height: 8)
+                                            } else {
+                                                Image(systemName: "network")
+                                                    .font(.system(size: 12))
+                                            }
+                                            Text(isTestingProxy ? "测试中..." : "测试连接")
+                                        }
+                                        .frame(minWidth: 80)
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+                                    .disabled(!tempProxyEnabled || isTestingProxy || isSaving)
                                 }
                             }
                             .opacity(tempProxyEnabled ? 1.0 : 0.6) // 视觉反馈显示开关状态
@@ -181,11 +248,20 @@ struct PreferencesWindowView: View {
             .padding(.horizontal, 24)
             .padding(.vertical, 16)
         }
-        .frame(width: 480, height: 590)
+        .frame(width: 480, height: 700)
         .alert("配置验证", isPresented: $showingValidationError) {
             Button("确定", role: .cancel) { }
         } message: {
             Text(validationErrorMessage)
+        }
+        .alert("代理测试结果", isPresented: $showingProxyTestResult) {
+            Button("确定", role: .cancel) { }
+        } message: {
+            HStack {
+                Image(systemName: proxyTestSucceeded ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .foregroundColor(proxyTestSucceeded ? .green : .red)
+                Text(proxyTestResultMessage)
+            }
         }
     }
 
@@ -222,11 +298,14 @@ struct PreferencesWindowView: View {
         appSettings.saveProxySettings(
             enabled: tempProxyEnabled,
             host: tempProxyHost,
-            port: port
+            port: port,
+            username: tempProxyUsername,
+            password: tempProxyPassword
         )
 
         if tempProxyEnabled {
-            print("✅ [Preferences] 已保存代理设置: \(tempProxyHost):\(port)")
+            let authInfo = !tempProxyUsername.isEmpty ? " (认证: \(tempProxyUsername))" : ""
+            print("✅ [Preferences] 已保存代理设置: \(tempProxyHost):\(port)\(authInfo)")
         } else {
             print("✅ [Preferences] 已禁用代理设置")
         }
@@ -235,6 +314,55 @@ struct PreferencesWindowView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             isSaving = false
             onClose()
+        }
+    }
+
+    /**
+     * 测试代理连接
+     */
+    private func testProxyConnection() {
+        print("🔧 [Preferences] 开始测试代理连接...")
+
+        // 首先验证输入
+        let validation = validateProxyInput()
+        if !validation.isValid {
+            proxyTestResultMessage = validation.errorMessage ?? "配置验证失败"
+            proxyTestSucceeded = false
+            showingProxyTestResult = true
+            return
+        }
+
+        isTestingProxy = true
+
+        Task {
+            // 创建临时价格服务实例进行测试
+            let tempAppSettings = AppSettings()
+            tempAppSettings.saveProxySettings(
+                enabled: true,
+                host: tempProxyHost.trimmingCharacters(in: .whitespacesAndNewlines),
+                port: Int(tempProxyPort) ?? 8080,
+                username: tempProxyUsername.trimmingCharacters(in: .whitespacesAndNewlines),
+                password: tempProxyPassword
+            )
+
+            let tempPriceService = PriceService(appSettings: tempAppSettings)
+            let success = await tempPriceService.testProxyConnection()
+
+            await MainActor.run {
+                isTestingProxy = false
+
+                if success {
+                    proxyTestResultMessage = "代理连接测试成功！可以正常访问币安API。"
+                    proxyTestSucceeded = true
+                    print("✅ [Preferences] 代理连接测试成功")
+                } else {
+                    proxyTestResultMessage = "代理连接测试失败，请检查代理配置或网络连接。"
+                    proxyTestSucceeded = false
+                    print("❌ [Preferences] 代理连接测试失败")
+                }
+
+                showingProxyTestResult = true
+            }
         }
     }
 

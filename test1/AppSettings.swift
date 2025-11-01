@@ -31,6 +31,10 @@ class AppSettings: ObservableObject {
     @Published var proxyHost: String = ""
     /// 代理服务器端口
     @Published var proxyPort: Int = 8080
+    /// 代理认证用户名
+    @Published var proxyUsername: String = ""
+    /// 代理认证密码
+    @Published var proxyPassword: String = ""
 
     // MARK: - Private Properties
 
@@ -44,6 +48,8 @@ class AppSettings: ObservableObject {
     private let proxyEnabledKey = "ProxyEnabled"
     private let proxyHostKey = "ProxyHost"
     private let proxyPortKey = "ProxyPort"
+    private let proxyUsernameKey = "ProxyUsername"
+    private let proxyPasswordKey = "ProxyPassword"
 
     // MARK: - Initialization
 
@@ -128,12 +134,16 @@ class AppSettings: ObservableObject {
         proxyHost = defaults.string(forKey: proxyHostKey) ?? ""
         proxyPort = defaults.integer(forKey: proxyPortKey)
         if proxyPort == 0 { proxyPort = 8080 } // 默认端口
+        proxyUsername = defaults.string(forKey: proxyUsernameKey) ?? ""
+        proxyPassword = defaults.string(forKey: proxyPasswordKey) ?? ""
 
         // 检查实际的自启动状态并同步
         checkAndSyncLaunchAtLoginStatus()
 
         #if DEBUG
-        print("🔧 [AppSettings] 配置加载完成 - 刷新间隔: \(refreshInterval.displayText), 币种: \(selectedSymbol.displayName), 开机自启动: \(launchAtLogin), 代理: \(proxyEnabled ? "\(proxyHost):\(proxyPort)" : "未启用")")
+        let proxyInfo = proxyEnabled ? "\(proxyHost):\(proxyPort)" : "未启用"
+        let authInfo = proxyEnabled && !proxyUsername.isEmpty ? " (认证: \(proxyUsername))" : ""
+        print("🔧 [AppSettings] 配置加载完成 - 刷新间隔: \(refreshInterval.displayText), 币种: \(selectedSymbol.displayName), 开机自启动: \(launchAtLogin), 代理: \(proxyInfo)\(authInfo)")
         #endif
     }
 
@@ -155,9 +165,13 @@ class AppSettings: ObservableObject {
         proxyEnabled = false
         proxyHost = ""
         proxyPort = 8080
+        proxyUsername = ""
+        proxyPassword = ""
         defaults.set(false, forKey: proxyEnabledKey)
         defaults.set("", forKey: proxyHostKey)
         defaults.set(8080, forKey: proxyPortKey)
+        defaults.set("", forKey: proxyUsernameKey)
+        defaults.set("", forKey: proxyPasswordKey)
 
         #if DEBUG
         print("🔧 [AppSettings] 重置完成 - 刷新间隔: \(refreshInterval.displayText), 币种: \(selectedSymbol.displayName), 代理: 已重置")
@@ -195,19 +209,26 @@ class AppSettings: ObservableObject {
     ///   - enabled: 是否启用代理
     ///   - host: 代理服务器地址
     ///   - port: 代理服务器端口
-    func saveProxySettings(enabled: Bool, host: String, port: Int) {
+    ///   - username: 代理认证用户名
+    ///   - password: 代理认证密码
+    func saveProxySettings(enabled: Bool, host: String, port: Int, username: String = "", password: String = "") {
         proxyEnabled = enabled
         proxyHost = host.trimmingCharacters(in: .whitespacesAndNewlines)
         proxyPort = port
+        proxyUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        proxyPassword = password
 
         // 保存到 UserDefaults
         defaults.set(enabled, forKey: proxyEnabledKey)
         defaults.set(proxyHost, forKey: proxyHostKey)
         defaults.set(port, forKey: proxyPortKey)
+        defaults.set(proxyUsername, forKey: proxyUsernameKey)
+        defaults.set(proxyPassword, forKey: proxyPasswordKey)
 
         #if DEBUG
         if enabled {
-            print("🔧 [AppSettings] 保存代理设置: \(proxyHost):\(proxyPort)")
+            let authInfo = !proxyUsername.isEmpty ? " (认证: \(proxyUsername))" : ""
+            print("🔧 [AppSettings] 保存代理设置: \(proxyHost):\(proxyPort)\(authInfo)")
         } else {
             print("🔧 [AppSettings] 保存代理设置: 已禁用")
         }
