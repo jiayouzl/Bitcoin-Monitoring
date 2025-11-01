@@ -416,7 +416,8 @@ class BTCMenuBarApp: NSObject, ObservableObject {
         // 使用新的关于窗口替代 NSAlert
         aboutWindowManager.showAboutWindow(
             currentRefreshInterval: currentInterval.displayText,
-            appVersion: version
+            appVersion: version,
+            appSettings: appSettings
         )
     }
 

@@ -133,7 +133,7 @@ struct PreferencesWindowView: View {
                                             .font(.caption)
                                             .foregroundColor(.secondary)
 
-                                        TextField("例如: proxy.example.com", text: $tempProxyHost)
+                                        TextField("IP or proxy.example.com", text: $tempProxyHost)
                                             .textFieldStyle(RoundedBorderTextFieldStyle())
                                             .frame(maxWidth: .infinity)
                                             .disabled(!tempProxyEnabled)

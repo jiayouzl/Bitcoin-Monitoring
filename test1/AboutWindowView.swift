@@ -6,6 +6,42 @@
 //
 
 import SwiftUI
+import Foundation
+
+/**
+ * 代理认证URLSessionDelegate
+ * 用于处理AboutWindowView中的代理认证
+ */
+class ProxyAwareURLSessionDelegate: NSObject, URLSessionTaskDelegate {
+    private let appSettings: AppSettings
+
+    init(appSettings: AppSettings) {
+        self.appSettings = appSettings
+        super.init()
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+
+        if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodHTTPBasic ||
+           challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodHTTPDigest {
+
+            // 获取代理认证信息
+            Task { @MainActor in
+                let username = appSettings.proxyUsername
+                let password = appSettings.proxyPassword
+
+                if !username.isEmpty && !password.isEmpty {
+                    let credential = URLCredential(user: username, password: password, persistence: .forSession)
+                    completionHandler(.useCredential, credential)
+                } else {
+                    completionHandler(.performDefaultHandling, nil)
+                }
+            }
+        } else {
+            completionHandler(.performDefaultHandling, nil)
+        }
+    }
+}
 
 /**
  * GitHub版本信息模型
@@ -62,6 +98,9 @@ struct AboutWindowView: View {
 
     // 应用版本
     let appVersion: String
+
+    // 应用设置，用于代理配置
+    let appSettings: AppSettings
 
     // 更新检测状态
     @State private var isCheckingForUpdates = false
@@ -172,8 +211,6 @@ struct AboutWindowView: View {
      * 检测更新
      */
     private func checkForUpdates() {
-        print("🔍 用户点击了检测更新按钮")
-
         isCheckingForUpdates = true
 
         // 在后台线程执行网络请求
@@ -189,11 +226,9 @@ struct AboutWindowView: View {
         do {
             // 获取最新版本信息
             let latestVersion = try fetchLatestVersion()
-            print("✅ 获取到最新版本: \(latestVersion)")
 
             // 比较版本号
             let comparisonResult = compareVersions(appVersion, latestVersion)
-            print("📊 版本比较结果: \(comparisonResult)")
 
             // 回到主线程更新UI状态
             DispatchQueue.main.async {
@@ -203,21 +238,17 @@ struct AboutWindowView: View {
                 case .orderedSame:
                     self.updateAlertMessage = "🎉 您已使用最新版本！"
                     self.showingUpdateAlert = true
-                    print("✅ 已是最新版本")
                 case .orderedAscending:
                     self.updateAlertMessage = "🆕 发现新版本！\n当前版本：\(self.appVersion)\n最新版本：\(latestVersion)\n\n点击确定后将打开GitHub发布页面。"
                     self.showingUpdateAlert = true
-                    print("🆕 发现新版本: \(latestVersion)")
                 case .orderedDescending:
                     self.updateAlertMessage = "🎉 您已使用最新版本！\n当前版本：\(self.appVersion)"
                     self.showingUpdateAlert = true
-                    print("✅ 当前版本比发布版本更新")
                 }
             }
 
         } catch {
             let errorMessage = error.localizedDescription
-            print("❌ 检测更新失败: \(errorMessage)")
 
             DispatchQueue.main.async {
                 self.isCheckingForUpdates = false
@@ -241,7 +272,8 @@ struct AboutWindowView: View {
             throw UpdateError.invalidURL
         }
 
-        print("🌐 请求URL: \(url)")
+        // 创建支持代理的URLSession
+        let session = createProxyAwareURLSession()
 
         // 使用信号量实现同步网络请求
         let semaphore = DispatchSemaphore(value: 0)
@@ -252,10 +284,10 @@ struct AboutWindowView: View {
         request.httpMethod = "GET"
         request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
         request.setValue("Bitcoin-Monitoring", forHTTPHeaderField: "User-Agent")
-        request.timeoutInterval = 10.0
+        request.timeoutInterval = 15.0
 
         // 发送网络请求
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+        let task = session.dataTask(with: request) { data, response, error in
             if let error = error {
                 result = .failure(error)
                 semaphore.signal()
@@ -274,8 +306,6 @@ struct AboutWindowView: View {
                 semaphore.signal()
                 return
             }
-
-            print("✅ API响应状态码: \(httpResponse.statusCode)")
 
             guard let data = data else {
                 result = .failure(UpdateError.noReleasesFound)
@@ -320,6 +350,58 @@ struct AboutWindowView: View {
         case .failure(let error):
             throw error
         }
+    }
+
+    /**
+     * 创建支持代理的URLSession
+     * - Returns: 配置好的URLSession
+     */
+    private func createProxyAwareURLSession() -> URLSession {
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 15.0
+        configuration.timeoutIntervalForResource = 30.0
+
+        // 如果启用了代理，配置代理设置
+        if appSettings.proxyEnabled {
+            let proxyDict: [AnyHashable: Any] = [
+                kCFNetworkProxiesHTTPEnable: 1,
+                kCFNetworkProxiesHTTPProxy: appSettings.proxyHost,
+                kCFNetworkProxiesHTTPPort: appSettings.proxyPort,
+                kCFNetworkProxiesHTTPSEnable: 1,
+                kCFNetworkProxiesHTTPSProxy: appSettings.proxyHost,
+                kCFNetworkProxiesHTTPSPort: appSettings.proxyPort
+            ]
+            configuration.connectionProxyDictionary = proxyDict
+        }
+
+        // 创建代理认证凭证存储
+        if appSettings.proxyEnabled && !appSettings.proxyUsername.isEmpty && !appSettings.proxyPassword.isEmpty {
+            let credential = URLCredential(user: appSettings.proxyUsername, password: appSettings.proxyPassword, persistence: .forSession)
+
+            // 为HTTP设置认证
+            let httpProtectionSpace = URLProtectionSpace(
+                host: appSettings.proxyHost,
+                port: appSettings.proxyPort,
+                protocol: "http",
+                realm: nil,
+                authenticationMethod: NSURLAuthenticationMethodHTTPBasic
+            )
+            URLCredentialStorage.shared.setDefaultCredential(credential, for: httpProtectionSpace)
+
+            // 为HTTPS设置认证
+            let httpsProtectionSpace = URLProtectionSpace(
+                host: appSettings.proxyHost,
+                port: appSettings.proxyPort,
+                protocol: "https",
+                realm: nil,
+                authenticationMethod: NSURLAuthenticationMethodHTTPBasic
+            )
+            URLCredentialStorage.shared.setDefaultCredential(credential, for: httpsProtectionSpace)
+        }
+
+        // 创建delegate并设置URLSession
+        let delegate = ProxyAwareURLSessionDelegate(appSettings: appSettings)
+        return URLSession(configuration: configuration, delegate: delegate, delegateQueue: nil)
     }
 
     /**
@@ -426,8 +508,9 @@ class AboutWindowManager: ObservableObject {
      * - Parameters:
      *   - currentRefreshInterval: 当前刷新间隔显示文本
      *   - appVersion: 应用版本号
+     *   - appSettings: 应用设置，用于代理配置
      */
-    func showAboutWindow(currentRefreshInterval: String, appVersion: String) {
+    func showAboutWindow(currentRefreshInterval: String, appVersion: String, appSettings: AppSettings) {
         // 如果窗口已存在，则将其带到前台
         if let existingWindow = aboutWindow {
             existingWindow.makeKeyAndOrderFront(nil)
@@ -440,7 +523,8 @@ class AboutWindowManager: ObservableObject {
                 self?.closeAboutWindow()
             },
             currentRefreshInterval: currentRefreshInterval,
-            appVersion: appVersion
+            appVersion: appVersion,
+            appSettings: appSettings
         )
 
         let hostingView = NSHostingView(rootView: aboutView)
@@ -530,6 +614,7 @@ class AboutWindowManager: ObservableObject {
     AboutWindowView(
         onClose: {},
         currentRefreshInterval: "30秒",
-        appVersion: "1.0.0"
+        appVersion: "1.0.0",
+        appSettings: AppSettings()
     )
 }
