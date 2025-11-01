@@ -91,6 +91,53 @@ class PriceService: NSObject, ObservableObject, URLSessionTaskDelegate {
         return URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
     }
 
+    /**
+     * 创建专门的测试 URLSession
+     * - Returns: 配置好的测试 URLSession
+     */
+    @MainActor
+    private func createTestURLSession() -> URLSession {
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 10.0
+        configuration.timeoutIntervalForResource = 15.0
+
+        // 配置代理设置
+        if appSettings.proxyEnabled {
+            let proxyDict = Self.createProxyDictionary(
+                host: appSettings.proxyHost,
+                port: appSettings.proxyPort,
+                username: appSettings.proxyUsername,
+                password: appSettings.proxyPassword
+            )
+            configuration.connectionProxyDictionary = proxyDict
+        }
+
+        // 创建代理认证凭证存储
+        if appSettings.proxyEnabled && !appSettings.proxyUsername.isEmpty && !appSettings.proxyPassword.isEmpty {
+            let credential = URLCredential(user: appSettings.proxyUsername, password: appSettings.proxyPassword, persistence: .forSession)
+            let protectionSpace = URLProtectionSpace(
+                host: appSettings.proxyHost,
+                port: appSettings.proxyPort,
+                protocol: "http",
+                realm: nil,
+                authenticationMethod: NSURLAuthenticationMethodHTTPBasic
+            )
+            URLCredentialStorage.shared.setDefaultCredential(credential, for: protectionSpace)
+
+            // 为HTTPS也设置
+            let httpsProtectionSpace = URLProtectionSpace(
+                host: appSettings.proxyHost,
+                port: appSettings.proxyPort,
+                protocol: "https",
+                realm: nil,
+                authenticationMethod: NSURLAuthenticationMethodHTTPBasic
+            )
+            URLCredentialStorage.shared.setDefaultCredential(credential, for: httpsProtectionSpace)
+        }
+
+        return URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
+    }
+
     // MARK: - URLSessionTaskDelegate
 
     /**
@@ -109,10 +156,6 @@ class PriceService: NSObject, ObservableObject, URLSessionTaskDelegate {
                 if !username.isEmpty && !password.isEmpty {
                     let credential = URLCredential(user: username, password: password, persistence: .forSession)
                     completionHandler(.useCredential, credential)
-
-                    #if DEBUG
-                    print("🔐 [PriceService] 使用代理认证: \(username)")
-                    #endif
                 } else {
                     completionHandler(.performDefaultHandling, nil)
                 }
@@ -243,12 +286,6 @@ class PriceService: NSObject, ObservableObject, URLSessionTaskDelegate {
         if !username.isEmpty && !password.isEmpty {
             // 注意：macOS 系统级别的代理认证需要通过系统偏好设置处理
             // URLSession 的代理字典主要用于配置代理服务器，认证信息通常由系统管理
-            // 这里我们保存认证信息，可能需要使用其他方式处理认证
-
-            #if DEBUG
-            print("🔐 [PriceService] 代理认证信息已记录: \(username)")
-            print("⚠️ [PriceService] 注意：macOS 代理认证可能需要系统级别配置")
-            #endif
         }
 
         return proxyDict
@@ -277,12 +314,7 @@ class PriceService: NSObject, ObservableObject, URLSessionTaskDelegate {
 
         self.session = newSession
 
-        #if DEBUG
-        let proxyInfo = proxyEnabled ? "\(proxyHost):\(proxyPort)" : "未启用"
-        let authInfo = proxyEnabled && !proxyUsername.isEmpty ? " (认证: \(proxyUsername))" : ""
-        print("🔄 [PriceService] 网络配置已更新 - 代理: \(proxyInfo)\(authInfo)")
-        #endif
-    }
+            }
 
     /**
      * 测试代理连接
@@ -294,111 +326,52 @@ class PriceService: NSObject, ObservableObject, URLSessionTaskDelegate {
         }
 
         guard proxyEnabled else {
-            #if DEBUG
-            print("🌐 [PriceService] 代理未启用，无需测试连接")
-            #endif
             return true
         }
 
-        // 首先尝试简单的 HTTP 连接测试
-        let httpTestResult = await testBasicHTTPConnection()
-        if httpTestResult {
-            // 如果 HTTP 连接成功，再尝试币安 API 测试
-            return await testBinanceAPIConnection()
-        }
-
-        return false
+        // 直接测试币安API，简化流程
+        return await testBinanceAPIConnection()
     }
 
+    
     /**
-     * 测试基础 HTTP 连接
+     * 测试币安API连接
      * - Returns: 测试结果
      */
-    private func testBasicHTTPConnection() async -> Bool {
-        do {
-            // 使用 httpbin.org 作为测试目标，这是一个简单的 HTTP 测试服务
-            guard let testURL = URL(string: "http://httpbin.org/ip") else {
-                #if DEBUG
-                print("❌ [PriceService] 测试URL无效")
-                #endif
-                return false
+    @MainActor
+    private func testBinanceAPIConnection() async -> Bool {
+        return await withCheckedContinuation { continuation in
+            // 使用专门的测试会话
+            let testSession = createTestURLSession()
+
+            guard let testURL = URL(string: "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT") else {
+                continuation.resume(returning: false)
+                return
             }
 
             var request = URLRequest(url: testURL)
             request.timeoutInterval = 10.0
             request.httpMethod = "GET"
 
-            let (data, response) = try await session.data(for: request)
+            let task = testSession.dataTask(with: request) { data, response, error in
+                if error != nil {
+                    continuation.resume(returning: false)
+                    return
+                }
 
-            guard let httpResponse = response as? HTTPURLResponse else {
-                #if DEBUG
-                print("❌ [PriceService] 无效的HTTP响应")
-                #endif
-                return false
-            }
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    continuation.resume(returning: false)
+                    return
+                }
 
-            if httpResponse.statusCode == 200 {
-                #if DEBUG
-                if let responseString = String(data: data, encoding: .utf8) {
-                    print("✅ [PriceService] HTTP连接测试成功，响应: \(responseString)")
+                if httpResponse.statusCode == 200 {
+                    continuation.resume(returning: true)
                 } else {
-                    print("✅ [PriceService] HTTP连接测试成功")
-                }
-                #endif
-                return true
-            } else {
-                #if DEBUG
-                print("❌ [PriceService] HTTP连接测试失败，状态码: \(httpResponse.statusCode)")
-                #endif
-                return false
-            }
-        } catch {
-            #if DEBUG
-            print("❌ [PriceService] HTTP连接测试失败: \(error.localizedDescription)")
-
-            // 提供更详细的错误信息
-            if let urlError = error as? URLError {
-                switch urlError.code {
-                case .notConnectedToInternet:
-                    print("🔍 [PriceService] 详细错误: 无网络连接")
-                case .timedOut:
-                    print("🔍 [PriceService] 详细错误: 请求超时")
-                case .cannotConnectToHost:
-                    print("🔍 [PriceService] 详细错误: 无法连接到代理服务器")
-                case .cannotFindHost:
-                    print("🔍 [PriceService] 详细错误: 找不到代理服务器地址")
-                case .networkConnectionLost:
-                    print("🔍 [PriceService] 详细错误: 网络连接丢失")
-                case .userAuthenticationRequired:
-                    print("🔍 [PriceService] 详细错误: 代理认证失败，请检查用户名和密码")
-                case .secureConnectionFailed:
-                    print("🔍 [PriceService] 详细错误: 安全连接失败")
-                default:
-                    print("🔍 [PriceService] 详细错误: \(urlError.localizedDescription)")
+                    continuation.resume(returning: false)
                 }
             }
-            #endif
-            return false
-        }
-    }
 
-    /**
-     * 测试币安API连接
-     * - Returns: 测试结果
-     */
-    private func testBinanceAPIConnection() async -> Bool {
-        do {
-            // 尝试获取一个测试币种的价格来验证代理连接
-            _ = try await fetchPrice(for: .btc)
-            #if DEBUG
-            print("✅ [PriceService] 币安API连接测试成功")
-            #endif
-            return true
-        } catch {
-            #if DEBUG
-            print("❌ [PriceService] 币安API连接测试失败: \(error.localizedDescription)")
-            #endif
-            return false
+            task.resume()
         }
     }
 }
