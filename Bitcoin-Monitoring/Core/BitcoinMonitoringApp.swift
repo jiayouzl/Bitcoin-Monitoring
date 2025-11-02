@@ -1,5 +1,5 @@
 //
-//  test1App.swift
+//  BitcoinMonitoringApp.swift
 //  Bitcoin Monitoring
 //
 //  Created by Mark on 2025/10/28.
@@ -9,7 +9,7 @@ import SwiftUI
 import AppKit
 
 @main
-struct test1App: App {
+struct BitcoinMonitoringApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
@@ -20,7 +20,7 @@ struct test1App: App {
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
-    var menuBarApp: BTCMenuBarApp?
+    var menuBarApp: MenuBarManager?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // 设置应用为后台应用（不显示在Dock中）
@@ -32,7 +32,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // 创建菜单栏应用
-        menuBarApp = BTCMenuBarApp()
+        menuBarApp = MenuBarManager()
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

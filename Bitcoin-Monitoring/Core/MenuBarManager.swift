@@ -1,5 +1,5 @@
 //
-//  BTCMenuBarApp.swift
+//  MenuBarManager.swift
 //  Bitcoin Monitoring
 //
 //  Created by Mark on 2025/10/28.
@@ -11,7 +11,7 @@ import Combine
 
 // macOS菜单栏应用主类
 @MainActor
-class BTCMenuBarApp: NSObject, ObservableObject {
+class MenuBarManager: NSObject, ObservableObject {
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
     private let appSettings: AppSettings
