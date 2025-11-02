@@ -11,9 +11,9 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		4E9410722EB09F90003658CB /* test1 */ = {
+		4E9410722EB09F90003658CB /* Bitcoin-Monitoring */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = test1;
+			path = "Bitcoin-Monitoring";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -32,7 +32,7 @@
 		4E9410672EB09F90003658CB = {
 			isa = PBXGroup;
 			children = (
-				4E9410722EB09F90003658CB /* test1 */,
+				4E9410722EB09F90003658CB /* Bitcoin-Monitoring */,
 				4E9410712EB09F90003658CB /* Products */,
 			);
 			sourceTree = "<group>";
@@ -61,12 +61,12 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				4E9410722EB09F90003658CB /* test1 */,
+				4E9410722EB09F90003658CB /* Bitcoin-Monitoring */,
 			);
 			name = "Bitcoin Monitoring";
 			packageProductDependencies = (
 			);
-			productName = test1;
+			productName = "Bitcoin-Monitoring";
 			productReference = 4E9410702EB09F90003658CB /* Bitcoin Monitoring.app */;
 			productType = "com.apple.product-type.application";
 		};
