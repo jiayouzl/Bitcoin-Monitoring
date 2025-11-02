@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Foundation
+import AVFoundation
 
 /**
  * 代理认证URLSessionDelegate
@@ -106,6 +107,9 @@ struct AboutWindowView: View {
     @State private var isCheckingForUpdates = false
     @State private var showingUpdateAlert = false
     @State private var updateAlertMessage = ""
+
+    // 音频播放器
+    @State private var audioPlayer: AVAudioPlayer?
 
     var body: some View {
         VStack(spacing: 20) {
@@ -240,6 +244,7 @@ struct AboutWindowView: View {
                     self.showingUpdateAlert = true
                 case .orderedAscending:
                     self.updateAlertMessage = "🆕 发现新版本！\n当前版本：\(self.appVersion)\n最新版本：\(latestVersion)\n\n点击确定后将打开GitHub发布页面。"
+                    self.playAlarmSound() // 播放提示音
                     self.showingUpdateAlert = true
                 case .orderedDescending:
                     self.updateAlertMessage = "🎉 您已使用最新版本！\n当前版本：\(self.appVersion)"
@@ -447,6 +452,32 @@ struct AboutWindowView: View {
 
         NSWorkspace.shared.open(url)
         print("✅ 已在浏览器中打开发布页面: \(releasePageURL)")
+    }
+
+    /**
+     * 播放提示音
+     * 播放Resources目录中的alarm.mp3文件
+     */
+    private func playAlarmSound() {
+        guard let audioPath = Bundle.main.path(forResource: "alarm", ofType: "mp3") else {
+            print("❌ 无法找到alarm.mp3文件")
+            return
+        }
+
+        let audioURL = URL(fileURLWithPath: audioPath)
+
+        do {
+            // 创建音频播放器 - 这个方法可能抛出错误
+            let player = try AVAudioPlayer(contentsOf: audioURL)
+            self.audioPlayer = player
+            player.prepareToPlay()
+
+            // 播放音频
+            player.play()
+            print("✅ 已播放更新提示音")
+        } catch {
+            print("❌ 播放提示音失败: \(error.localizedDescription)")
+        }
     }
 }
 
