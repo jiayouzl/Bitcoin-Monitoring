@@ -2,7 +2,7 @@
 //  CustomCryptoSymbol.swift
 //  Bitcoin Monitoring
 //
-//  Created by Claude on 2025/11/03.
+//  Created by Mark on 2025/11/03.
 //
 
 import Foundation

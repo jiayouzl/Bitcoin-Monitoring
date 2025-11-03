@@ -59,7 +59,7 @@ class MenuBarManager: NSObject, ObservableObject {
             .store(in: &cancellables)
 
         // 监听自定义币种配置变化
-        appSettings.$customCryptoSymbol
+        appSettings.$customCryptoSymbols
             .sink { [weak self] _ in
                 guard let self = self else { return }
                 self.priceManager.updateCryptoSymbolSettings()
@@ -245,8 +245,8 @@ class MenuBarManager: NSObject, ObservableObject {
         }
 
         // 添加自定义币种菜单项（如果存在）- 显示在最后
-        var customSymbolMenuItem: NSMenuItem?
-        if let customSymbol = appSettings.customCryptoSymbol {
+        var customSymbolMenuItems: [NSMenuItem] = []
+        for customSymbol in appSettings.customCryptoSymbols {
             let isCurrent = customSymbol.isCurrentSymbol(currentApiSymbol)
             let placeholderTitle = isCurrent ? "✓ \(customSymbol.displayName) (自定义): 加载中..." : "  \(customSymbol.displayName) (自定义): 加载中..."
             let item = NSMenuItem(title: placeholderTitle, action: #selector(self.selectOrCopySymbol(_:)), keyEquivalent: "")
@@ -258,7 +258,7 @@ class MenuBarManager: NSObject, ObservableObject {
             item.isEnabled = true
             item.representedObject = ["customSymbol": customSymbol, "price": 0.0, "isCustom": true]
             menu.addItem(item)
-            customSymbolMenuItem = item
+            customSymbolMenuItems.append(item)
         }
 
         // 异步并发获取所有币种价格并更新对应的菜单项
@@ -294,22 +294,24 @@ class MenuBarManager: NSObject, ObservableObject {
             }
 
             // 更新自定义币种菜单项
-            if let customSymbol = self.appSettings.customCryptoSymbol,
-               let menuItem = customSymbolMenuItem {
-                let isCurrent = customSymbol.isCurrentSymbol(currentSymbolAfter)
+            for (index, customSymbol) in self.appSettings.customCryptoSymbols.enumerated() {
+                if index < customSymbolMenuItems.count {
+                    let menuItem = customSymbolMenuItems[index]
+                    let isCurrent = customSymbol.isCurrentSymbol(currentSymbolAfter)
 
-                if let price = await self.priceManager.fetchCustomSymbolPrice(forApiSymbol: customSymbol.apiSymbol) {
-                    let title = isCurrent ? "✓ \(customSymbol.displayName) (自定义): $\(self.formatPriceWithCommas(price))" : "  \(customSymbol.displayName) (自定义): $\(self.formatPriceWithCommas(price))"
-                    menuItem.title = title
-                    menuItem.isEnabled = true
-                    menuItem.target = self
-                    menuItem.representedObject = ["customSymbol": customSymbol, "price": price, "isCustom": true]
-                } else {
-                    let title = isCurrent ? "✓ \(customSymbol.displayName) (自定义): 错误" : "  \(customSymbol.displayName) (自定义): 错误"
-                    menuItem.title = title
-                    menuItem.isEnabled = false
-                    menuItem.target = self
-                    menuItem.representedObject = ["customSymbol": customSymbol, "price": 0.0, "isCustom": true]
+                    if let price = await self.priceManager.fetchCustomSymbolPrice(forApiSymbol: customSymbol.apiSymbol) {
+                        let title = isCurrent ? "✓ \(customSymbol.displayName) (自定义): $\(self.formatPriceWithCommas(price))" : "  \(customSymbol.displayName) (自定义): $\(self.formatPriceWithCommas(price))"
+                        menuItem.title = title
+                        menuItem.isEnabled = true
+                        menuItem.target = self
+                        menuItem.representedObject = ["customSymbol": customSymbol, "price": price, "isCustom": true]
+                    } else {
+                        let title = isCurrent ? "✓ \(customSymbol.displayName) (自定义): 错误" : "  \(customSymbol.displayName) (自定义): 错误"
+                        menuItem.title = title
+                        menuItem.isEnabled = false
+                        menuItem.target = self
+                        menuItem.representedObject = ["customSymbol": customSymbol, "price": 0.0, "isCustom": true]
+                    }
                 }
             }
         }
@@ -500,9 +502,11 @@ class MenuBarManager: NSObject, ObservableObject {
         } else {
             // 选择该币种
             if isCustom, let customSymbol = data["customSymbol"] as? CustomCryptoSymbol {
-                // 选择自定义币种
-                appSettings.saveCustomCryptoSymbol(customSymbol)
-                print("✅ 已切换到自定义币种: \(customSymbol.displayName)")
+                // 选择自定义币种 - 找到对应的索引并选择
+                if let index = appSettings.customCryptoSymbols.firstIndex(of: customSymbol) {
+                    appSettings.selectCustomCryptoSymbol(at: index)
+                    print("✅ 已切换到自定义币种: \(customSymbol.displayName)")
+                }
 
                 // 立即更新价格管理器
                 self.priceManager.updateCryptoSymbolSettings()

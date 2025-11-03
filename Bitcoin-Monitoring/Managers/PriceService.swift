@@ -240,6 +240,54 @@ class PriceService: NSObject, ObservableObject, URLSessionTaskDelegate {
         return price
     }
 
+    /// 验证自定义币种是否在币安API中存在
+    /// - Parameter symbol: 币种符号（如 "ADA"）
+    /// - Returns: 是否存在该币种
+    func validateCustomSymbol(_ symbol: String) async -> Bool {
+        let apiSymbol = "\(symbol)USDT"
+        let urlString = "\(baseURL)?symbol=\(apiSymbol)"
+
+        guard let url = URL(string: urlString) else {
+            #if DEBUG
+            print("❌ [PriceService] 验证失败：无效的URL - \(urlString)")
+            #endif
+            return false
+        }
+
+        #if DEBUG
+        print("🔍 [PriceService] 验证币种存在性: \(apiSymbol)")
+        #endif
+
+        do {
+            // 发送网络请求验证币种是否存在
+            let (_, response) = try await session.data(from: url)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                #if DEBUG
+                print("❌ [PriceService] 验证失败：无效响应 - \(symbol)")
+                #endif
+                return false
+            }
+
+            let isValid = httpResponse.statusCode == 200
+
+            #if DEBUG
+            if isValid {
+                print("✅ [PriceService] 币种验证成功: \(symbol) 存在")
+            } else {
+                print("❌ [PriceService] 币种验证失败: \(symbol) 不存在 (HTTP \(httpResponse.statusCode))")
+            }
+            #endif
+
+            return isValid
+        } catch {
+            #if DEBUG
+            print("❌ [PriceService] 币种验证网络错误: \(symbol) - \(error.localizedDescription)")
+            #endif
+            return false
+        }
+    }
+
     // MARK: - 代理配置相关方法
 
     /**

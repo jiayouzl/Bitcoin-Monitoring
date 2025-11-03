@@ -72,6 +72,15 @@ struct PreferencesWindowView: View {
     @State private var isCustomSymbolValid: Bool = false
     @State private var customSymbolErrorMessage: String?
     @State private var showingCustomSymbolDeleteConfirmation: Bool = false
+    @State private var pendingDeleteIndex: Int? = nil
+
+    // 验证相关状态
+    @State private var isValidatingCustomSymbol: Bool = false
+    @State private var showingValidationFailureAlert: Bool = false
+    @State private var validationFailureMessage: String = ""
+
+    // PriceService 引用
+    private let priceService: PriceService
 
     // 导航状态 - 当前选中的标签页
     @State private var selectedTab: SettingsTab = .general
@@ -81,6 +90,7 @@ struct PreferencesWindowView: View {
 
     init(appSettings: AppSettings, onClose: @escaping () -> Void) {
         self.appSettings = appSettings
+        self.priceService = PriceService(appSettings: appSettings)
         self.onClose = onClose
 
         // 初始化临时状态
@@ -113,6 +123,11 @@ struct PreferencesWindowView: View {
                 }
             } message: {
                 deleteCustomSymbolMessage
+            }
+            .alert("币种验证失败", isPresented: $showingValidationFailureAlert) {
+                Button("确定", role: .cancel) { }
+            } message: {
+                Text(validationFailureMessage)
             }
     }
 
@@ -396,55 +411,120 @@ struct PreferencesWindowView: View {
     private var customCryptoSettingsView: some View {
         SettingsGroupView(title: "自定义币种", icon: "plus.circle") {
             VStack(alignment: .leading, spacing: 16) {
-                if appSettings.isUsingCustomSymbol() {
-                    currentCustomSymbolView
-                } else {
-                    addCustomSymbolView
+                // 显示已添加的自定义币种列表
+                if !appSettings.customCryptoSymbols.isEmpty {
+                    customSymbolsListView
+                }
+
+                // 添加新币种的输入区域
+                addCustomSymbolView
+            }
+        }
+    }
+
+    // 自定义币种列表视图
+    private var customSymbolsListView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("已添加的自定义币种 (\(appSettings.customCryptoSymbols.count)/5)")
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.primary)
+
+            VStack(spacing: 8) {
+                ForEach(0..<appSettings.customCryptoSymbols.count, id: \.self) { index in
+                    customSymbolRowView(at: index)
                 }
             }
         }
     }
 
-    // 当前自定义币种视图
-    private var currentCustomSymbolView: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: appSettings.getCurrentActiveSystemImageName())
-                    .foregroundColor(.orange)
-                    .font(.system(size: 16))
+    // 自定义币种行视图
+    private func customSymbolRowView(at index: Int) -> some View {
+        let customSymbol = appSettings.customCryptoSymbols[index]
+        let isSelected = appSettings.isUsingCustomSymbol() && appSettings.selectedCustomSymbolIndex == index
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("当前自定义币种")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+        return HStack {
+            // 选中状态指示器
+            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 14))
+                .foregroundColor(isSelected ? .blue : .secondary)
 
-                    Text(appSettings.getCurrentActivePairDisplayName())
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+            // 币种图标
+            Image(systemName: customSymbol.systemImageName)
+                .foregroundColor(.orange)
+                .font(.system(size: 16))
 
-                Spacer()
+            // 币种信息
+            VStack(alignment: .leading, spacing: 2) {
+                Text(customSymbol.displayName)
+                    .font(.subheadline)
+                    .fontWeight(isSelected ? .medium : .regular)
+                    .foregroundColor(.primary)
 
-                Button("删除") {
-                    showingCustomSymbolDeleteConfirmation = true
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .foregroundColor(.red)
+                Text(customSymbol.pairDisplayName)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
+
+            Spacer()
+
+            // 删除按钮
+            Button(action: {
+                showingCustomSymbolDeleteConfirmation = true
+                pendingDeleteIndex = index
+            }) {
+                Image(systemName: "trash")
+                    .font(.system(size: 12))
+                    .foregroundColor(.red)
+            }
+            .buttonStyle(PlainButtonStyle())
+            .frame(width: 24, height: 24)
+            .background(
+                Circle()
+                    .fill(Color.red.opacity(0.1))
+            )
+            .onHover { isHovered in
+                if isHovered {
+                    NSCursor.pointingHand.set()
+                } else {
+                    NSCursor.arrow.set()
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isSelected ? Color.blue.opacity(0.1) : Color.clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(isSelected ? Color.blue : Color(NSColor.separatorColor), lineWidth: 1)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 6))
+        .onTapGesture {
+            // 点击选中币种
+            appSettings.selectCustomCryptoSymbol(at: index)
         }
     }
 
     // 添加自定义币种视图
     private var addCustomSymbolView: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("添加自定义币种")
+            Text(appSettings.customCryptoSymbols.isEmpty ? "添加自定义币种" : "添加更多自定义币种")
                 .font(.subheadline)
                 .foregroundColor(.primary)
 
-            Text("输入3-5个大写字母的币种符号（如 ADA、DOGE、SHIB）")
+            Text("输入3-5个大写字母的币种符号（如 ENA、TRX、TRUMP）")
                 .font(.caption)
                 .foregroundColor(.secondary)
+
+            // 显示数量限制提示
+            if appSettings.customCryptoSymbols.count >= 5 {
+                Text("已达到最大限制（5个币种）")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+            }
 
             customSymbolInputView
         }
@@ -458,7 +538,7 @@ struct PreferencesWindowView: View {
                 .foregroundColor(.secondary)
 
             HStack(spacing: 12) {
-                TextField("例如: ADA", text: Binding(
+                TextField("例如: TRX", text: Binding(
                     get: { customSymbolInput },
                     set: { newValue in
                         let filteredValue = newValue.filter { $0.isLetter }.uppercased()
@@ -471,13 +551,31 @@ struct PreferencesWindowView: View {
                 ))
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .frame(maxWidth: .infinity)
+                .onSubmit {
+                    // 按回车键触发添加自定义币种
+                    Task {
+                        await addCustomSymbolWithValidation()
+                    }
+                }
 
-                Button("添加") {
-                    addCustomSymbol()
+                Button {
+                    Task {
+                        await addCustomSymbolWithValidation()
+                    }
+                } label: {
+                    if isValidatingCustomSymbol {
+                        HStack(spacing: 4) {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("验证中...")
+                        }
+                    } else {
+                        Text("添加")
+                    }
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
-                .disabled(!isCustomSymbolValid || isSaving)
+                .disabled(!isCustomSymbolValid || isSaving || isValidatingCustomSymbol || appSettings.customCryptoSymbols.count >= 5)
             }
 
             if !isCustomSymbolValid && !customSymbolInput.isEmpty {
@@ -536,7 +634,9 @@ struct PreferencesWindowView: View {
 
     // 删除自定义币种确认消息
     private var deleteCustomSymbolMessage: Text {
-        if let customSymbol = appSettings.customCryptoSymbol {
+        if let index = pendingDeleteIndex,
+           index >= 0 && index < appSettings.customCryptoSymbols.count {
+            let customSymbol = appSettings.customCryptoSymbols[index]
             return Text("确定要删除自定义币种 \"\(customSymbol.displayName)\" 吗？删除后将无法恢复。")
         } else {
             return Text("确定要删除自定义币种吗？删除后将无法恢复。")
@@ -667,7 +767,62 @@ struct PreferencesWindowView: View {
     // MARK: - 自定义币种相关方法
 
     /**
-     * 添加自定义币种
+     * 添加自定义币种（带币安API验证）
+     */
+    private func addCustomSymbolWithValidation() async {
+        guard isCustomSymbolValid, !customSymbolInput.isEmpty else {
+            return
+        }
+
+        do {
+            let customSymbol = try CustomCryptoSymbol(symbol: customSymbolInput)
+
+            // 开始验证
+            isValidatingCustomSymbol = true
+
+            // 验证币种是否在币安API中存在
+            let isValid = await priceService.validateCustomSymbol(customSymbol.symbol)
+
+            await MainActor.run {
+                isValidatingCustomSymbol = false
+
+                if isValid {
+                    // 验证通过，添加币种
+                    let success = appSettings.addCustomCryptoSymbol(customSymbol)
+
+                    if success {
+                        // 清空输入状态
+                        customSymbolInput = ""
+                        isCustomSymbolValid = false
+                        customSymbolErrorMessage = nil
+
+                        print("✅ [Preferences] 已添加自定义币种: \(customSymbol.displayName)")
+                    } else {
+                        // 添加失败（可能是因为数量限制或重复）
+                        customSymbolErrorMessage = "无法添加该币种（可能已达到最大限制或币种重复）"
+                        isCustomSymbolValid = false
+                    }
+                } else {
+                    // 验证失败，显示错误提示
+                    validationFailureMessage = "币种 \"\(customSymbol.symbol)\" 在币安交易所中不存在，请检查币种代码是否正确"
+                    showingValidationFailureAlert = true
+                    isCustomSymbolValid = false
+                    customSymbolErrorMessage = "币种不存在或无法获取价格"
+                }
+            }
+        } catch {
+            await MainActor.run {
+                isValidatingCustomSymbol = false
+                // 格式验证失败（这种情况理论上不会发生，因为我们在onChange中已经验证了）
+                print("❌ [Preferences] 添加自定义币种失败: \(error.localizedDescription)")
+                customSymbolErrorMessage = "添加失败：\(error.localizedDescription)"
+                isCustomSymbolValid = false
+            }
+        }
+    }
+
+    /**
+     * 添加自定义币种（原方法，保留作为备用）
      */
     private func addCustomSymbol() {
         guard isCustomSymbolValid, !customSymbolInput.isEmpty else {
@@ -676,17 +831,27 @@ struct PreferencesWindowView: View {
 
         do {
             let customSymbol = try CustomCryptoSymbol(symbol: customSymbolInput)
-            appSettings.saveCustomCryptoSymbol(customSymbol)
 
-            // 清空输入状态
-            customSymbolInput = ""
-            isCustomSymbolValid = false
-            customSymbolErrorMessage = nil
+            // 使用新的添加方法
+            let success = appSettings.addCustomCryptoSymbol(customSymbol)
 
-            print("✅ [Preferences] 已添加自定义币种: \(customSymbol.displayName)")
+            if success {
+                // 清空输入状态
+                customSymbolInput = ""
+                isCustomSymbolValid = false
+                customSymbolErrorMessage = nil
+
+                print("✅ [Preferences] 已添加自定义币种: \(customSymbol.displayName)")
+            } else {
+                // 添加失败（可能是因为数量限制或重复）
+                customSymbolErrorMessage = "无法添加该币种（可能已达到最大限制或币种重复）"
+                isCustomSymbolValid = false
+            }
         } catch {
             // 这种情况理论上不会发生，因为我们在onChange中已经验证了
             print("❌ [Preferences] 添加自定义币种失败: \(error.localizedDescription)")
+            customSymbolErrorMessage = "添加失败：\(error.localizedDescription)"
+            isCustomSymbolValid = false
         }
     }
 
@@ -694,7 +859,13 @@ struct PreferencesWindowView: View {
      * 删除自定义币种
      */
     private func deleteCustomSymbol() {
-        appSettings.removeCustomCryptoSymbol()
+        guard let index = pendingDeleteIndex else {
+            print("❌ [Preferences] 删除失败：无效的索引")
+            return
+        }
+
+        appSettings.removeCustomCryptoSymbol(at: index)
+        pendingDeleteIndex = nil
         print("✅ [Preferences] 已删除自定义币种")
     }
 }

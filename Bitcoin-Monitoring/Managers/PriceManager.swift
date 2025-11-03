@@ -17,7 +17,8 @@ class PriceManager: ObservableObject {
     @Published var selectedSymbol: CryptoSymbol
 
     // 自定义币种相关属性
-    @Published var customCryptoSymbol: CustomCryptoSymbol?
+    @Published var customCryptoSymbols: [CustomCryptoSymbol] = []
+    @Published var selectedCustomSymbolIndex: Int?
     @Published var useCustomSymbol: Bool = false
 
     private let priceService: PriceService
@@ -35,7 +36,8 @@ class PriceManager: ObservableObject {
         self.priceService = PriceService(appSettings: appSettings)
 
         // 初始化自定义币种状态
-        self.customCryptoSymbol = appSettings.customCryptoSymbol
+        self.customCryptoSymbols = appSettings.customCryptoSymbols
+        self.selectedCustomSymbolIndex = appSettings.selectedCustomSymbolIndex
         self.useCustomSymbol = appSettings.useCustomSymbol
 
         startPriceUpdates()
@@ -322,7 +324,8 @@ class PriceManager: ObservableObject {
 
     /// 更新币种设置（当AppSettings中的自定义币种发生变化时调用）
     func updateCryptoSymbolSettings() {
-        customCryptoSymbol = appSettings.customCryptoSymbol
+        customCryptoSymbols = appSettings.customCryptoSymbols
+        selectedCustomSymbolIndex = appSettings.selectedCustomSymbolIndex
         useCustomSymbol = appSettings.useCustomSymbol
 
         // 重置价格状态，强制重新获取
@@ -344,7 +347,8 @@ class PriceManager: ObservableObject {
     func getAllAvailableSymbols() -> [String] {
         var symbols = CryptoSymbol.allApiSymbols
 
-        if let customSymbol = appSettings.customCryptoSymbol {
+        // 添加所有自定义币种
+        for customSymbol in appSettings.customCryptoSymbols {
             symbols.append(customSymbol.apiSymbol)
         }
 
@@ -361,9 +365,10 @@ class PriceManager: ObservableObject {
         }
 
         // 检查是否是自定义币种
-        if let customSymbol = appSettings.customCryptoSymbol,
-           customSymbol.apiSymbol == apiSymbol {
-            return customSymbol.displayName
+        for customSymbol in appSettings.customCryptoSymbols {
+            if customSymbol.apiSymbol == apiSymbol {
+                return customSymbol.displayName
+            }
         }
 
         // 如果都找不到，返回API符号的基础部分（去掉USDT）
