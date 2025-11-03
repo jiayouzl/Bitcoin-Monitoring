@@ -562,7 +562,7 @@ class MenuBarManager: NSObject, ObservableObject {
         #if DEBUG
         let alert = NSAlert()
         alert.messageText = "重置设置"
-        alert.informativeText = "确定要将所有设置重置为默认值吗？\n\n• 币种：BTC\n• 刷新间隔：30秒"
+        alert.informativeText = "确定要将所有设置重置为默认值吗？\n\n将重置以下所有设置：\n• 币种：BTC\n• 刷新间隔：30秒\n• 自定义币种：清空所有自定义币种\n• 代理设置：关闭代理，清空配置\n• 开机自启动：关闭开机自启动"
         alert.alertStyle = .warning
         alert.addButton(withTitle: "确定")
         alert.addButton(withTitle: "取消")
