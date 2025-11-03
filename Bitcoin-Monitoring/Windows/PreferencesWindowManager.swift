@@ -40,7 +40,7 @@ class PreferencesWindowManager: ObservableObject {
         let hostingView = NSHostingView(rootView: preferencesView)
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 480, height: 620),
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 600),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false

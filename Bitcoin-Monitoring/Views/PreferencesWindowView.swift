@@ -8,8 +8,35 @@
 import SwiftUI
 
 /**
+ * 设置标签页枚举
+ * 定义偏好设置中的主要分类标签
+ */
+enum SettingsTab: String, CaseIterable {
+    case general = "通用"
+    case custom = "自定义币种"
+    case proxy = "代理设置"
+
+    /// 标签对应的SF Symbols图标
+    var icon: String {
+        switch self {
+        case .general:
+            return "gear"
+        case .custom:
+            return "plus.circle"
+        case .proxy:
+            return "network"
+        }
+    }
+
+    /// 标签显示文本
+    var displayText: String {
+        return self.rawValue
+    }
+}
+
+/**
  * 偏好设置窗口视图组件
- * 使用 SwiftUI 实现的美观偏好设置界面，包含刷新设置和代理设置
+ * 使用现代化顶部标签栏导航的SwiftUI偏好设置界面
  */
 struct PreferencesWindowView: View {
     // 窗口关闭回调
@@ -46,6 +73,12 @@ struct PreferencesWindowView: View {
     @State private var customSymbolErrorMessage: String?
     @State private var showingCustomSymbolDeleteConfirmation: Bool = false
 
+    // 导航状态 - 当前选中的标签页
+    @State private var selectedTab: SettingsTab = .general
+
+    // 悬停状态
+    @State private var hoveredTab: SettingsTab? = nil
+
     init(appSettings: AppSettings, onClose: @escaping () -> Void) {
         self.appSettings = appSettings
         self.onClose = onClose
@@ -62,7 +95,7 @@ struct PreferencesWindowView: View {
 
     var body: some View {
         mainContentView
-            .frame(width: 480, height: 800)
+            .frame(width: 480, height: 500)
             .alert("配置验证", isPresented: $showingValidationError) {
                 Button("确定", role: .cancel) { }
             } message: {
@@ -86,6 +119,12 @@ struct PreferencesWindowView: View {
     // 主要内容视图
     private var mainContentView: some View {
         VStack(spacing: 0) {
+            // 顶部标签栏导航
+            topTabBarView
+
+            Divider()
+
+            // 内容区域
             ScrollView {
                 settingsContentView
                     .padding(24)
@@ -97,18 +136,90 @@ struct PreferencesWindowView: View {
         }
     }
 
-    // 设置内容视图
+    // 顶部标签栏导航视图
+    private var topTabBarView: some View {
+        HStack(spacing: 0) {
+            ForEach(SettingsTab.allCases, id: \.self) { tab in
+                // 使用整个标签区域作为可点击区域
+                HStack(spacing: 8) {
+                    Image(systemName: tab.icon)
+                        .font(.system(size: 14))
+                        .foregroundColor(selectedTab == tab ? .blue : .secondary)
+
+                    Text(tab.displayText)
+                        .font(.system(size: 13))
+                        .fontWeight(selectedTab == tab ? .medium : .regular)
+                        .foregroundColor(selectedTab == tab ? .blue : .primary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity) // 填充整个可用空间
+                .contentShape(Rectangle()) // 确保整个矩形区域都可点击
+                .background(
+                    RoundedRectangle(cornerRadius: 0)
+                        .fill(selectedTab == tab ? Color(NSColor.controlAccentColor).opacity(0.1) : Color.clear)
+                )
+                .background(
+                    // 悬停效果
+                    RoundedRectangle(cornerRadius: 0)
+                        .fill(hoveredTab == tab && selectedTab != tab ? Color(NSColor.controlAccentColor).opacity(0.05) : Color.clear)
+                )
+                .onTapGesture {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedTab = tab
+                    }
+                }
+                .onHover { isHovered in
+                    if isHovered {
+                        NSCursor.pointingHand.set()
+                        hoveredTab = tab
+                    } else {
+                        NSCursor.arrow.set()
+                        if hoveredTab == tab {
+                            hoveredTab = nil
+                        }
+                    }
+                }
+
+                // 在标签之间添加分隔线（除了最后一个）
+                if tab != SettingsTab.allCases.last {
+                    Rectangle()
+                        .fill(Color(NSColor.separatorColor))
+                        .frame(width: 1)
+                        .padding(.vertical, 8)
+                }
+            }
+        }
+        .frame(height: 44)
+        .background(Color(NSColor.controlBackgroundColor))
+    }
+
+    // 设置内容视图 - 根据选中的标签显示对应内容
     private var settingsContentView: some View {
         VStack(spacing: 24) {
-            refreshSettingsView
-            launchSettingsView
-            proxySettingsView
-            customCryptoSettingsView
+            // 根据选中的标签显示对应内容
+            Group {
+                switch selectedTab {
+                case .general:
+                    generalSettingsView
+                case .custom:
+                    customCryptoSettingsView
+                case .proxy:
+                    proxySettingsView
+                }
+            }
 
             Spacer(minLength: 20)
         }
     }
 
+    // 通用设置视图（刷新间隔 + 启动设置）
+    private var generalSettingsView: some View {
+        VStack(spacing: 24) {
+            refreshSettingsView
+            launchSettingsView
+        }
+    }
+
+    
     // 刷新设置视图
     private var refreshSettingsView: some View {
         SettingsGroupView(title: "刷新设置", icon: "timer") {
@@ -632,6 +743,8 @@ struct SettingsGroupView<Content: View>: View {
         )
     }
 }
+
+
 
 /**
  * 刷新间隔选择按钮组件

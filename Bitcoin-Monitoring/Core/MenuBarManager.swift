@@ -22,12 +22,17 @@ class MenuBarManager: NSObject, ObservableObject {
     private let aboutWindowManager = AboutWindowManager()
 
     // 偏好设置窗口管理器
-    private lazy var preferencesWindowManager = PreferencesWindowManager(appSettings: appSettings)
+    private var preferencesWindowManager: PreferencesWindowManager!
 
     override init() {
+        // 先创建 AppSettings 实例
         let settings = AppSettings()
         self.appSettings = settings
         self.priceManager = PriceManager(initialSymbol: settings.selectedSymbol, appSettings: settings)
+
+        // 现在初始化偏好设置窗口管理器，使用相同的 appSettings 实例
+        self.preferencesWindowManager = PreferencesWindowManager(appSettings: settings)
+
         super.init()
         setupMenuBar()
         setupConfigurationObservers()
