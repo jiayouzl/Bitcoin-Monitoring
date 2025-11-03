@@ -40,6 +40,12 @@ struct PreferencesWindowView: View {
     // 保存状态
     @State private var isSaving = false
 
+    // 自定义币种相关状态
+    @State private var customSymbolInput: String = ""
+    @State private var isCustomSymbolValid: Bool = false
+    @State private var customSymbolErrorMessage: String?
+    @State private var showingCustomSymbolDeleteConfirmation: Bool = false
+
     init(appSettings: AppSettings, onClose: @escaping () -> Void) {
         self.appSettings = appSettings
         self.onClose = onClose
@@ -55,213 +61,374 @@ struct PreferencesWindowView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // 主要内容区域
-            ScrollView {
-                VStack(spacing: 24) {
-                    // 刷新设置区域
-                    SettingsGroupView(title: "刷新设置", icon: "timer") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("选择价格刷新间隔")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-
-                            HStack(spacing: 12) {
-                                ForEach(RefreshInterval.allCases, id: \.self) { interval in
-                                    IntervalSelectionButton(
-                                        interval: interval,
-                                        isSelected: tempRefreshInterval == interval,
-                                        onSelect: { tempRefreshInterval = interval }
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // 开机启动设置区域
-                    SettingsGroupView(title: "启动设置", icon: "power") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("开机自动启动")
-                                        .font(.subheadline)
-                                        .foregroundColor(.primary)
-
-                                    Text("应用将在系统启动时自动运行")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-
-                                Spacer()
-
-                                Toggle("", isOn: $tempLaunchAtLogin)
-                                    .labelsHidden()
-                                    .toggleStyle(.switch)
-                                    .controlSize(.mini)
-                            }
-                        }
-                    }
-
-                    // 代理设置区域
-                    SettingsGroupView(title: "代理设置", icon: "network") {
-                        VStack(alignment: .leading, spacing: 16) {
-                            // 代理开关
-                            HStack {
-                                Text("启用HTTP代理")
-                                    .font(.subheadline)
-                                    .foregroundColor(.primary)
-
-                                Spacer()
-
-                                Toggle("", isOn: $tempProxyEnabled)
-                                    .labelsHidden()
-                                    .toggleStyle(.switch)
-                                    .controlSize(.mini)
-                            }
-
-                            // 代理配置输入框 - 始终显示
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("代理服务器配置")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-
-                                // 服务器地址和端口
-                                HStack(spacing: 12) {
-                                    // 服务器地址
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("服务器地址")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-
-                                        TextField("ip or proxy.example.com", text: $tempProxyHost)
-                                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                                            .frame(maxWidth: .infinity)
-                                            .disabled(!tempProxyEnabled)
-                                    }
-
-                                    // 端口
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("端口")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-
-                                        TextField("3128", text: $tempProxyPort)
-                                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                                            .frame(width: 80)
-                                            .disabled(!tempProxyEnabled)
-                                    }
-                                }
-
-                                // 认证配置
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("认证设置 (可选)")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-
-                                    HStack(spacing: 12) {
-                                        // 用户名
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text("用户名")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-
-                                            TextField("user", text: $tempProxyUsername)
-                                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                                .frame(maxWidth: .infinity)
-                                                .disabled(!tempProxyEnabled)
-                                        }
-
-                                        // 密码
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text("密码")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-
-                                            SecureField("password", text: $tempProxyPassword)
-                                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                                .frame(maxWidth: .infinity)
-                                                .disabled(!tempProxyEnabled)
-                                        }
-                                    }
-                                }
-
-                                // 测试按钮
-                                HStack {
-                                    Spacer()
-
-                                    Button(action: testProxyConnection) {
-                                        HStack {
-                                            if isTestingProxy {
-                                                ProgressView()
-                                                    .scaleEffect(0.4)
-                                                    .frame(width: 8, height: 8)
-                                            } else {
-                                                Image(systemName: "network")
-                                                    .font(.system(size: 12))
-                                            }
-                                            Text(isTestingProxy ? "测试中..." : "测试连接")
-                                        }
-                                        .frame(minWidth: 80)
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .controlSize(.small)
-                                    .disabled(!tempProxyEnabled || isTestingProxy || isSaving)
-                                }
-                            }
-                            .opacity(tempProxyEnabled ? 1.0 : 0.6) // 视觉反馈显示开关状态
-                        }
-                    }
-
-                    Spacer(minLength: 20)
+        mainContentView
+            .frame(width: 480, height: 800)
+            .alert("配置验证", isPresented: $showingValidationError) {
+                Button("确定", role: .cancel) { }
+            } message: {
+                Text(validationErrorMessage)
+            }
+            .alert("代理测试结果", isPresented: $showingProxyTestResult) {
+                Button("确定", role: .cancel) { }
+            } message: {
+                proxyTestAlertContent
+            }
+            .alert("删除自定义币种", isPresented: $showingCustomSymbolDeleteConfirmation) {
+                Button("取消", role: .cancel) { }
+                Button("删除", role: .destructive) {
+                    deleteCustomSymbol()
                 }
-                .padding(24)
+            } message: {
+                deleteCustomSymbolMessage
+            }
+    }
+
+    // 主要内容视图
+    private var mainContentView: some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                settingsContentView
+                    .padding(24)
             }
 
             Divider()
 
-            // 底部按钮区域
+            bottomButtonsView
+        }
+    }
+
+    // 设置内容视图
+    private var settingsContentView: some View {
+        VStack(spacing: 24) {
+            refreshSettingsView
+            launchSettingsView
+            proxySettingsView
+            customCryptoSettingsView
+
+            Spacer(minLength: 20)
+        }
+    }
+
+    // 刷新设置视图
+    private var refreshSettingsView: some View {
+        SettingsGroupView(title: "刷新设置", icon: "timer") {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("选择价格刷新间隔")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                HStack(spacing: 12) {
+                    ForEach(RefreshInterval.allCases, id: \.self) { interval in
+                        IntervalSelectionButton(
+                            interval: interval,
+                            isSelected: tempRefreshInterval == interval,
+                            onSelect: { tempRefreshInterval = interval }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // 启动设置视图
+    private var launchSettingsView: some View {
+        SettingsGroupView(title: "启动设置", icon: "power") {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("开机自动启动")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+
+                        Text("应用将在系统启动时自动运行")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    Toggle("", isOn: $tempLaunchAtLogin)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.mini)
+                }
+            }
+        }
+    }
+
+    // 代理设置视图
+    private var proxySettingsView: some View {
+        SettingsGroupView(title: "代理设置", icon: "network") {
+            VStack(alignment: .leading, spacing: 16) {
+                proxyToggleView
+                proxyConfigView
+            }
+            .opacity(tempProxyEnabled ? 1.0 : 0.6)
+        }
+    }
+
+    // 代理开关视图
+    private var proxyToggleView: some View {
+        HStack {
+            Text("启用HTTP代理")
+                .font(.subheadline)
+                .foregroundColor(.primary)
+
+            Spacer()
+
+            Toggle("", isOn: $tempProxyEnabled)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+        }
+    }
+
+    // 代理配置视图
+    private var proxyConfigView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("代理服务器配置")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            proxyServerConfigView
+            proxyAuthConfigView
+            proxyTestButtonView
+        }
+    }
+
+    // 代理服务器配置视图
+    private var proxyServerConfigView: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("服务器地址")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                TextField("ip or proxy.example.com", text: $tempProxyHost)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .frame(maxWidth: .infinity)
+                    .disabled(!tempProxyEnabled)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("端口")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                TextField("3128", text: $tempProxyPort)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .frame(width: 80)
+                    .disabled(!tempProxyEnabled)
+            }
+        }
+    }
+
+    // 代理认证配置视图
+    private var proxyAuthConfigView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("认证设置 (可选)")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("用户名")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    TextField("user", text: $tempProxyUsername)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .frame(maxWidth: .infinity)
+                        .disabled(!tempProxyEnabled)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("密码")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    SecureField("password", text: $tempProxyPassword)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .frame(maxWidth: .infinity)
+                        .disabled(!tempProxyEnabled)
+                }
+            }
+        }
+    }
+
+    // 代理测试按钮视图
+    private var proxyTestButtonView: some View {
+        HStack {
+            Spacer()
+
+            Button(action: testProxyConnection) {
+                HStack {
+                    if isTestingProxy {
+                        ProgressView()
+                            .scaleEffect(0.4)
+                            .frame(width: 8, height: 8)
+                    } else {
+                        Image(systemName: "network")
+                            .font(.system(size: 12))
+                    }
+                    Text(isTestingProxy ? "测试中..." : "测试连接")
+                }
+                .frame(minWidth: 80)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .disabled(!tempProxyEnabled || isTestingProxy || isSaving)
+        }
+    }
+
+    // 自定义币种设置视图
+    private var customCryptoSettingsView: some View {
+        SettingsGroupView(title: "自定义币种", icon: "plus.circle") {
+            VStack(alignment: .leading, spacing: 16) {
+                if appSettings.isUsingCustomSymbol() {
+                    currentCustomSymbolView
+                } else {
+                    addCustomSymbolView
+                }
+            }
+        }
+    }
+
+    // 当前自定义币种视图
+    private var currentCustomSymbolView: some View {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
+                Image(systemName: appSettings.getCurrentActiveSystemImageName())
+                    .foregroundColor(.orange)
+                    .font(.system(size: 16))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("当前自定义币种")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+
+                    Text(appSettings.getCurrentActivePairDisplayName())
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
                 Spacer()
 
-                // 取消按钮
-                Button("取消") {
-                    onClose()
+                Button("删除") {
+                    showingCustomSymbolDeleteConfirmation = true
                 }
-                .keyboardShortcut(.escape)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .foregroundColor(.red)
+            }
+        }
+    }
 
-                // 保存按钮
-                Button(action: saveSettings) {
-                    HStack {
-                        if isSaving {
-                            ProgressView()
-                                .scaleEffect(0.4)
-                                .frame(width: 8, height: 8)
-                        }
-                        Text("保存")
+    // 添加自定义币种视图
+    private var addCustomSymbolView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("添加自定义币种")
+                .font(.subheadline)
+                .foregroundColor(.primary)
+
+            Text("输入3-5个大写字母的币种符号（如 ADA、DOGE、SHIB）")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            customSymbolInputView
+        }
+    }
+
+    // 自定义币种输入视图
+    private var customSymbolInputView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("币种符号")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            HStack(spacing: 12) {
+                TextField("例如: ADA", text: Binding(
+                    get: { customSymbolInput },
+                    set: { newValue in
+                        let filteredValue = newValue.filter { $0.isLetter }.uppercased()
+                        customSymbolInput = String(filteredValue.prefix(5))
+
+                        let validation = CustomCryptoSymbol.isValidSymbol(customSymbolInput)
+                        isCustomSymbolValid = validation.isValid
+                        customSymbolErrorMessage = validation.errorMessage
                     }
-                    .frame(minWidth: 80)
+                ))
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .frame(maxWidth: .infinity)
+
+                Button("添加") {
+                    addCustomSymbol()
                 }
                 .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.defaultAction)
-                .disabled(isSaving)
+                .controlSize(.small)
+                .disabled(!isCustomSymbolValid || isSaving)
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 16)
-        }
-        .frame(width: 480, height: 700)
-        .alert("配置验证", isPresented: $showingValidationError) {
-            Button("确定", role: .cancel) { }
-        } message: {
-            Text(validationErrorMessage)
-        }
-        .alert("代理测试结果", isPresented: $showingProxyTestResult) {
-            Button("确定", role: .cancel) { }
-        } message: {
-            HStack {
-                Image(systemName: proxyTestSucceeded ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .foregroundColor(proxyTestSucceeded ? .green : .red)
-                Text(proxyTestResultMessage)
+
+            if !isCustomSymbolValid && !customSymbolInput.isEmpty {
+                Text(customSymbolErrorMessage ?? "输入格式不正确")
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .padding(.leading, 4)
             }
+
+            if customSymbolInput.isEmpty {
+                Text("输入币种符号后将自动验证")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                    .padding(.leading, 4)
+            }
+        }
+    }
+
+    // 底部按钮视图
+    private var bottomButtonsView: some View {
+        HStack {
+            Spacer()
+
+            Button("取消") {
+                onClose()
+            }
+            .keyboardShortcut(.escape)
+
+            Button(action: saveSettings) {
+                HStack {
+                    if isSaving {
+                        ProgressView()
+                            .scaleEffect(0.4)
+                            .frame(width: 8, height: 8)
+                    }
+                    Text("保存")
+                }
+                .frame(minWidth: 80)
+            }
+            .buttonStyle(.borderedProminent)
+            .keyboardShortcut(.defaultAction)
+            .disabled(isSaving)
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 16)
+    }
+
+    // 代理测试警告内容
+    private var proxyTestAlertContent: some View {
+        HStack {
+            Image(systemName: proxyTestSucceeded ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .foregroundColor(proxyTestSucceeded ? .green : .red)
+            Text(proxyTestResultMessage)
+        }
+    }
+
+    // 删除自定义币种确认消息
+    private var deleteCustomSymbolMessage: Text {
+        if let customSymbol = appSettings.customCryptoSymbol {
+            return Text("确定要删除自定义币种 \"\(customSymbol.displayName)\" 吗？删除后将无法恢复。")
+        } else {
+            return Text("确定要删除自定义币种吗？删除后将无法恢复。")
         }
     }
 
@@ -384,6 +551,40 @@ struct PreferencesWindowView: View {
         }
 
         return (true, nil)
+    }
+
+    // MARK: - 自定义币种相关方法
+
+    /**
+     * 添加自定义币种
+     */
+    private func addCustomSymbol() {
+        guard isCustomSymbolValid, !customSymbolInput.isEmpty else {
+            return
+        }
+
+        do {
+            let customSymbol = try CustomCryptoSymbol(symbol: customSymbolInput)
+            appSettings.saveCustomCryptoSymbol(customSymbol)
+
+            // 清空输入状态
+            customSymbolInput = ""
+            isCustomSymbolValid = false
+            customSymbolErrorMessage = nil
+
+            print("✅ [Preferences] 已添加自定义币种: \(customSymbol.displayName)")
+        } catch {
+            // 这种情况理论上不会发生，因为我们在onChange中已经验证了
+            print("❌ [Preferences] 添加自定义币种失败: \(error.localizedDescription)")
+        }
+    }
+
+    /**
+     * 删除自定义币种
+     */
+    private func deleteCustomSymbol() {
+        appSettings.removeCustomCryptoSymbol()
+        print("✅ [Preferences] 已删除自定义币种")
     }
 }
 

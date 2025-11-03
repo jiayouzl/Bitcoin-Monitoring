@@ -23,6 +23,13 @@ class AppSettings: ObservableObject {
     /// 是否开机自启动
     @Published var launchAtLogin: Bool = false
 
+    // MARK: - 自定义币种相关属性
+
+    /// 当前选中的自定义币种（如果有）
+    @Published var customCryptoSymbol: CustomCryptoSymbol?
+    /// 是否使用自定义币种
+    @Published var useCustomSymbol: Bool = false
+
     // MARK: - 代理设置相关属性
 
     /// 是否启用代理
@@ -42,6 +49,11 @@ class AppSettings: ObservableObject {
     private let refreshIntervalKey = "BTCRefreshInterval"
     private let selectedSymbolKey = "SelectedCryptoSymbol"
     private let launchAtLoginKey = "LaunchAtLogin"
+
+    // MARK: - 自定义币种配置键值
+
+    private let customSymbolKey = "CustomCryptoSymbol"
+    private let useCustomSymbolKey = "UseCustomSymbol"
 
     // MARK: - 代理配置键值
 
@@ -129,6 +141,23 @@ class AppSettings: ObservableObject {
         // 加载开机自启动设置
         launchAtLogin = defaults.bool(forKey: launchAtLoginKey)
 
+        // 加载自定义币种设置 - 总是先尝试读取数据
+        if let customSymbolData = defaults.data(forKey: customSymbolKey),
+           let customSymbol = try? JSONDecoder().decode(CustomCryptoSymbol.self, from: customSymbolData) {
+            customCryptoSymbol = customSymbol
+            // 根据保存的状态决定是否使用自定义币种
+            useCustomSymbol = defaults.bool(forKey: useCustomSymbolKey)
+            #if DEBUG
+            print("🔧 [AppSettings] ✅ 已加载自定义币种: \(customSymbol.displayName)，使用状态: \(useCustomSymbol)")
+            #endif
+        } else {
+            customCryptoSymbol = nil
+            useCustomSymbol = false
+            #if DEBUG
+            print("🔧 [AppSettings] ℹ️ 未找到自定义币种数据")
+            #endif
+        }
+
         // 加载代理设置
         proxyEnabled = defaults.bool(forKey: proxyEnabledKey)
         proxyHost = defaults.string(forKey: proxyHostKey) ?? ""
@@ -143,7 +172,8 @@ class AppSettings: ObservableObject {
         #if DEBUG
         let proxyInfo = proxyEnabled ? "\(proxyHost):\(proxyPort)" : "未启用"
         let authInfo = proxyEnabled && !proxyUsername.isEmpty ? " (认证: \(proxyUsername))" : ""
-        print("🔧 [AppSettings] 配置加载完成 - 刷新间隔: \(refreshInterval.displayText), 币种: \(selectedSymbol.displayName), 开机自启动: \(launchAtLogin), 代理: \(proxyInfo)\(authInfo)")
+        let customInfo = useCustomSymbol && customCryptoSymbol != nil ? " (自定义: \(customCryptoSymbol!.displayName))" : ""
+        print("🔧 [AppSettings] 配置加载完成 - 刷新间隔: \(refreshInterval.displayText), 币种: \(getCurrentActiveDisplayName())\(customInfo), 开机自启动: \(launchAtLogin), 代理: \(proxyInfo)\(authInfo)")
         #endif
     }
 
@@ -161,6 +191,12 @@ class AppSettings: ObservableObject {
         saveRefreshInterval(.thirtySeconds)
         saveSelectedSymbol(.btc)
 
+        // 重置自定义币种设置
+        useCustomSymbol = false
+        customCryptoSymbol = nil
+        defaults.set(false, forKey: useCustomSymbolKey)
+        defaults.removeObject(forKey: customSymbolKey)
+
         // 重置代理设置
         proxyEnabled = false
         proxyHost = ""
@@ -174,7 +210,7 @@ class AppSettings: ObservableObject {
         defaults.set("", forKey: proxyPasswordKey)
 
         #if DEBUG
-        print("🔧 [AppSettings] 重置完成 - 刷新间隔: \(refreshInterval.displayText), 币种: \(selectedSymbol.displayName), 代理: 已重置")
+        print("🔧 [AppSettings] 重置完成 - 刷新间隔: \(refreshInterval.displayText), 币种: \(selectedSymbol.displayName), 自定义币种: 已清除, 代理: 已重置")
         #endif
 
         // 重置开机自启动设置
@@ -196,6 +232,19 @@ class AppSettings: ObservableObject {
     /// - Parameter symbol: 要保存的币种
     func saveSelectedSymbol(_ symbol: CryptoSymbol) {
         selectedSymbol = symbol
+
+        // 如果当前正在使用自定义币种，只是切换使用状态，不删除数据
+        if useCustomSymbol {
+            useCustomSymbol = false
+            defaults.set(false, forKey: useCustomSymbolKey)
+
+            #if DEBUG
+            if let customSymbol = customCryptoSymbol {
+                print("🔧 [AppSettings] ✅ 已切换到默认币种: \(symbol.displayName)，自定义币种 \(customSymbol.displayName) 保留")
+            }
+            #endif
+        }
+
         #if DEBUG
         print("🔧 [AppSettings] 保存币种配置: \(symbol.displayName) (\(symbol.rawValue))")
         #endif
@@ -354,6 +403,87 @@ class AppSettings: ObservableObject {
 
         let actualStatus = SMAppService.mainApp.status
         return actualStatus == .enabled
+    }
+
+    // MARK: - 自定义币种相关方法
+
+    /// 保存自定义币种设置
+    /// - Parameter customSymbol: 要保存的自定义币种
+    func saveCustomCryptoSymbol(_ customSymbol: CustomCryptoSymbol) {
+        customCryptoSymbol = customSymbol
+        useCustomSymbol = true
+
+        do {
+            let data = try JSONEncoder().encode(customSymbol)
+            defaults.set(data, forKey: customSymbolKey)
+            defaults.set(true, forKey: useCustomSymbolKey)
+
+            #if DEBUG
+            print("🔧 [AppSettings] ✅ 已保存自定义币种: \(customSymbol.displayName)")
+            #endif
+        } catch {
+            #if DEBUG
+            print("🔧 [AppSettings] ❌ 保存自定义币种失败: \(error.localizedDescription)")
+            #endif
+        }
+    }
+
+    /// 移除自定义币种
+    func removeCustomCryptoSymbol() {
+        customCryptoSymbol = nil
+        useCustomSymbol = false
+        defaults.removeObject(forKey: customSymbolKey)
+        defaults.set(false, forKey: useCustomSymbolKey)
+
+        #if DEBUG
+        print("🔧 [AppSettings] ✅ 已移除自定义币种")
+        #endif
+    }
+
+    /// 获取当前活跃的币种API符号
+    /// - Returns: 当前活跃币种的API符号
+    func getCurrentActiveApiSymbol() -> String {
+        if useCustomSymbol, let customSymbol = customCryptoSymbol {
+            return customSymbol.apiSymbol
+        } else {
+            return selectedSymbol.apiSymbol
+        }
+    }
+
+    /// 获取当前活跃的币种显示名称
+    /// - Returns: 当前活跃币种的显示名称
+    func getCurrentActiveDisplayName() -> String {
+        if useCustomSymbol, let customSymbol = customCryptoSymbol {
+            return customSymbol.displayName
+        } else {
+            return selectedSymbol.displayName
+        }
+    }
+
+    /// 获取当前活跃的币种图标
+    /// - Returns: 当前活跃币种的图标名称
+    func getCurrentActiveSystemImageName() -> String {
+        if useCustomSymbol, let customSymbol = customCryptoSymbol {
+            return customSymbol.systemImageName
+        } else {
+            return selectedSymbol.systemImageName
+        }
+    }
+
+    /// 获取当前活跃的币种交易对显示名称
+    /// - Returns: 当前活跃币种的交易对显示名称
+    func getCurrentActivePairDisplayName() -> String {
+        if useCustomSymbol, let customSymbol = customCryptoSymbol {
+            return customSymbol.pairDisplayName
+        } else {
+            return selectedSymbol.pairDisplayName
+        }
+    }
+
+    /// 判断是否正在使用自定义币种
+    /// - Returns: 是否正在使用自定义币种
+    func isUsingCustomSymbol() -> Bool {
+        return useCustomSymbol && customCryptoSymbol != nil
     }
 }
 

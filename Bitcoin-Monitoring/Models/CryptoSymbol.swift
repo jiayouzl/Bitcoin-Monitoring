@@ -64,4 +64,34 @@ enum CryptoSymbol: String, CaseIterable, Codable {
     func menuTitle(isCurrent: Bool) -> String {
         return isCurrent ? "✓ \(pairDisplayName)" : "  \(pairDisplayName)"
     }
+
+    /// 判断是否为当前选中的币种
+    /// - Parameter currentSymbol: 当前选中的币种字符串
+    /// - Returns: 是否为当前选中币种
+    func isCurrentSymbol(_ currentSymbol: String) -> Bool {
+        return rawValue == currentSymbol || displayName.uppercased() == currentSymbol.uppercased()
+    }
+}
+
+// MARK: - Default Crypto Symbol Extensions
+
+extension CryptoSymbol {
+    /// 获取所有默认币种的API符号列表
+    static var allApiSymbols: [String] {
+        return allCases.map { $0.apiSymbol }
+    }
+
+    /// 根据API符号查找对应的默认币种
+    /// - Parameter apiSymbol: API符号
+    /// - Returns: 对应的币种，如果不存在则返回nil
+    static func fromApiSymbol(_ apiSymbol: String) -> CryptoSymbol? {
+        return allCases.first { $0.apiSymbol == apiSymbol }
+    }
+
+    /// 根据显示名称查找对应的默认币种
+    /// - Parameter displayName: 显示名称
+    /// - Returns: 对应的币种，如果不存在则返回nil
+    static func fromDisplayName(_ displayName: String) -> CryptoSymbol? {
+        return allCases.first { $0.displayName.uppercased() == displayName.uppercased() }
+    }
 }

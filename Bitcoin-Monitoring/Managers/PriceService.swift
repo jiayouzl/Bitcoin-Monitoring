@@ -196,6 +196,50 @@ class PriceService: NSObject, ObservableObject, URLSessionTaskDelegate {
         return price
     }
 
+    /// 获取指定API符号的价格（支持自定义币种）
+    /// - Parameter apiSymbol: API符号（如 "ADAUSDT"）
+    /// - Returns: 价格值
+    func fetchPrice(forApiSymbol apiSymbol: String) async throws -> Double {
+        let urlString = "\(baseURL)?symbol=\(apiSymbol)"
+        guard let url = URL(string: urlString) else {
+            throw PriceError.invalidURL
+        }
+
+        #if DEBUG
+        print("📡 [PriceService] 请求API: \(urlString)")
+        #endif
+
+        // 发送网络请求
+        let (data, response) = try await session.data(from: url)
+
+        // 检查响应状态
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw PriceError.invalidResponse
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            #if DEBUG
+            print("❌ [PriceService] 服务器错误: \(httpResponse.statusCode) | API符号: \(apiSymbol)")
+            #endif
+            throw PriceError.serverError(httpResponse.statusCode)
+        }
+
+        // 解析JSON数据
+        let decoder = JSONDecoder()
+        let priceResponse = try decoder.decode(TickerPriceResponse.self, from: data)
+
+        // 转换价格为Double类型
+        guard let price = Double(priceResponse.price) else {
+            throw PriceError.invalidPrice
+        }
+
+        #if DEBUG
+        print("✅ [PriceService] 价格获取成功: \(apiSymbol) = $\(String(format: "%.4f", price))")
+        #endif
+
+        return price
+    }
+
     // MARK: - 代理配置相关方法
 
     /**
@@ -383,6 +427,8 @@ enum PriceError: Error, LocalizedError {
     case serverError(Int)
     case invalidPrice
     case networkError(Error)
+    case symbolNotFound(String) // 自定义币种不存在
+    case invalidSymbol(String) // 无效的币种符号
 
     var errorDescription: String? {
         switch self {
@@ -391,11 +437,19 @@ enum PriceError: Error, LocalizedError {
         case .invalidResponse:
             return "无效的响应"
         case .serverError(let code):
-            return "服务器错误，状态码：\(code)"
+            if code == 400 {
+                return "币种符号不存在或无效"
+            } else {
+                return "服务器错误，状态码：\(code)"
+            }
         case .invalidPrice:
             return "无效的价格数据"
         case .networkError(let error):
             return "网络错误：\(error.localizedDescription)"
+        case .symbolNotFound(let symbol):
+            return "未找到币种：\(symbol)"
+        case .invalidSymbol(let symbol):
+            return "无效的币种符号：\(symbol)"
         }
     }
 }
