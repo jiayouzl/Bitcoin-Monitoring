@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import AppKit
 
 /// 自定义加密货币数据模型
 /// 支持用户定义的3-5字符币种符号，使用统一的BTC图标
@@ -121,9 +122,16 @@ extension CustomCryptoSymbol {
         return "\(symbol)/USDT"
     }
 
-    /// 对应的SF Symbols图标名称（统一使用BTC图标）
+    /// 对应的图标名称（基于首字母生成的自定义图标）
     var systemImageName: String {
+        // 保留系统图标名称作为后备方案
         return "bitcoinsign.circle.fill"
+    }
+
+    /// 获取基于首字母的自定义图标
+    /// - Returns: 自定义生成的NSImage图标
+    func customIcon() -> NSImage {
+        return CryptoIconGenerator.generateSystemIcon(for: symbol)
     }
 
     /// 菜单标题（带勾选标记和自定义标识）

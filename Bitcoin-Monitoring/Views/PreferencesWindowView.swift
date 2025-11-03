@@ -449,10 +449,16 @@ struct PreferencesWindowView: View {
                 .font(.system(size: 14))
                 .foregroundColor(isSelected ? .blue : .secondary)
 
-            // 币种图标
-            Image(systemName: customSymbol.systemImageName)
-                .foregroundColor(.orange)
-                .font(.system(size: 16))
+            // 币种图标（使用基于首字母的自定义图标）
+            Group {
+                let nsImage = customSymbol.customIcon()
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+            }
+            .foregroundColor(.orange)
+            .font(.system(size: 16))
+            .frame(width: 16, height: 16)
 
             // 币种信息
             VStack(alignment: .leading, spacing: 2) {

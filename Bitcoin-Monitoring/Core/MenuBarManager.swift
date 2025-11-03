@@ -146,9 +146,11 @@ class MenuBarManager: NSObject, ObservableObject {
             let symbolImage: NSImage?
 
             if self.appSettings.isUsingCustomSymbol() {
+                // 自定义币种：使用自定义图标
                 symbolImage = self.customSymbolImage()
             } else {
-                symbolImage = self.symbolImage(for: self.priceManager.selectedSymbol)
+                // 默认币种：直接从AppSettings获取当前选中的币种，避免依赖可能尚未更新的priceManager
+                symbolImage = self.symbolImage(for: self.appSettings.selectedSymbol)
             }
             symbolImage?.size = NSSize(width: 16, height: 16)
 
@@ -178,9 +180,20 @@ class MenuBarManager: NSObject, ObservableObject {
         return NSImage(systemSymbolName: "bitcoinsign.circle.fill", accessibilityDescription: "Crypto")
     }
 
-    // 获取自定义币种的图标（统一使用BTC图标）
+    // 获取自定义币种的图标（基于首字母生成）
     private func customSymbolImage() -> NSImage? {
+        if appSettings.isUsingCustomSymbol(),
+           let index = appSettings.selectedCustomSymbolIndex,
+           index >= 0 && index < appSettings.customCryptoSymbols.count {
+            let customSymbol = appSettings.customCryptoSymbols[index]
+            return customSymbol.customIcon()
+        }
         return NSImage(systemSymbolName: "bitcoinsign.circle.fill", accessibilityDescription: "自定义币种")
+    }
+
+    // 获取指定自定义币种的图标
+    private func customSymbolImage(for customSymbol: CustomCryptoSymbol) -> NSImage? {
+        return customSymbol.customIcon()
     }
 
     // 格式化价格为千分位分隔形式
@@ -251,7 +264,7 @@ class MenuBarManager: NSObject, ObservableObject {
             let placeholderTitle = isCurrent ? "✓ \(customSymbol.displayName) (自定义): 加载中..." : "  \(customSymbol.displayName) (自定义): 加载中..."
             let item = NSMenuItem(title: placeholderTitle, action: #selector(self.selectOrCopySymbol(_:)), keyEquivalent: "")
             item.target = self
-            if let icon = customSymbolImage() {
+            if let icon = customSymbolImage(for: customSymbol) {
                 icon.size = NSSize(width: 16, height: 16)
                 item.image = icon
             }
@@ -508,18 +521,19 @@ class MenuBarManager: NSObject, ObservableObject {
                     print("✅ 已切换到自定义币种: \(customSymbol.displayName)")
                 }
 
-                // 立即更新价格管理器
+                // 立即更新价格管理器和UI
                 self.priceManager.updateCryptoSymbolSettings()
-                self.updateMenuBarTitle(price: self.priceManager.currentPrice)
+                // 使用0.0价格强制更新显示状态，确保图标和文字都正确更新
+                self.updateMenuBarTitle(price: 0.0)
             } else if let symbol = data["symbol"] as? CryptoSymbol {
                 // 选择默认币种
                 appSettings.saveSelectedSymbol(symbol)
-
                 print("✅ 已切换到默认币种: \(symbol.displayName)")
 
-                // 立即更新价格管理器
+                // 立即更新价格管理器和UI
                 self.priceManager.updateCryptoSymbolSettings()
-                self.updateMenuBarTitle(price: self.priceManager.currentPrice)
+                // 使用0.0价格强制更新显示状态，确保图标和文字都正确更新
+                self.updateMenuBarTitle(price: 0.0)
             }
         }
     }
