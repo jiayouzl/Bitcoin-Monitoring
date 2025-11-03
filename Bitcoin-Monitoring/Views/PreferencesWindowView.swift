@@ -133,7 +133,7 @@ struct PreferencesWindowView: View {
                                             .font(.caption)
                                             .foregroundColor(.secondary)
 
-                                        TextField("IP or proxy.example.com", text: $tempProxyHost)
+                                        TextField("ip or proxy.example.com", text: $tempProxyHost)
                                             .textFieldStyle(RoundedBorderTextFieldStyle())
                                             .frame(maxWidth: .infinity)
                                             .disabled(!tempProxyEnabled)
@@ -145,7 +145,7 @@ struct PreferencesWindowView: View {
                                             .font(.caption)
                                             .foregroundColor(.secondary)
 
-                                        TextField("8080", text: $tempProxyPort)
+                                        TextField("3128", text: $tempProxyPort)
                                             .textFieldStyle(RoundedBorderTextFieldStyle())
                                             .frame(width: 80)
                                             .disabled(!tempProxyEnabled)
@@ -165,7 +165,7 @@ struct PreferencesWindowView: View {
                                                 .font(.caption)
                                                 .foregroundColor(.secondary)
 
-                                            TextField("用户名", text: $tempProxyUsername)
+                                            TextField("user", text: $tempProxyUsername)
                                                 .textFieldStyle(RoundedBorderTextFieldStyle())
                                                 .frame(maxWidth: .infinity)
                                                 .disabled(!tempProxyEnabled)
@@ -177,7 +177,7 @@ struct PreferencesWindowView: View {
                                                 .font(.caption)
                                                 .foregroundColor(.secondary)
 
-                                            SecureField("密码", text: $tempProxyPassword)
+                                            SecureField("password", text: $tempProxyPassword)
                                                 .textFieldStyle(RoundedBorderTextFieldStyle())
                                                 .frame(maxWidth: .infinity)
                                                 .disabled(!tempProxyEnabled)
