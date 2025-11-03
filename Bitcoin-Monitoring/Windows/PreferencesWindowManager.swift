@@ -26,6 +26,16 @@ class PreferencesWindowManager: ObservableObject {
         // 如果窗口已存在，则将其带到前台
         if let existingWindow = preferencesWindow {
             existingWindow.makeKeyAndOrderFront(nil)
+
+            // 确保窗口获得焦点和激活状态
+            DispatchQueue.main.async {
+                // 激活应用程序
+                NSApp.activate(ignoringOtherApps: true)
+
+                // 再次确保窗口获得焦点
+                existingWindow.makeKeyAndOrderFront(nil)
+                existingWindow.orderFrontRegardless()
+            }
             return
         }
 
@@ -66,8 +76,18 @@ class PreferencesWindowManager: ObservableObject {
         // 保存窗口引用
         self.preferencesWindow = window
 
-        // 显示窗口
+        // 显示窗口并获取焦点
         window.makeKeyAndOrderFront(nil)
+
+        // 确保窗口获得焦点和激活状态
+        DispatchQueue.main.async {
+            // 激活应用程序
+            NSApp.activate(ignoringOtherApps: true)
+
+            // 再次确保窗口获得焦点
+            window.makeKeyAndOrderFront(nil)
+            window.orderFrontRegardless()
+        }
 
         print("✅ 已显示偏好设置窗口")
     }
