@@ -676,7 +676,7 @@ struct PreferencesWindowView: View {
         }
 
         // 保存代理设置
-        let port = Int(tempProxyPort) ?? 8080
+        let port = Int(tempProxyPort) ?? 3128
         appSettings.saveProxySettings(
             enabled: tempProxyEnabled,
             host: tempProxyHost,
@@ -722,7 +722,7 @@ struct PreferencesWindowView: View {
             tempAppSettings.saveProxySettings(
                 enabled: true,
                 host: tempProxyHost.trimmingCharacters(in: .whitespacesAndNewlines),
-                port: Int(tempProxyPort) ?? 8080,
+                port: Int(tempProxyPort) ?? 3128,
                 username: tempProxyUsername.trimmingCharacters(in: .whitespacesAndNewlines),
                 password: tempProxyPassword
             )

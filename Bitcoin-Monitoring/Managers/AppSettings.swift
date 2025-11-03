@@ -39,7 +39,7 @@ class AppSettings: ObservableObject {
     /// 代理服务器地址
     @Published var proxyHost: String = ""
     /// 代理服务器端口
-    @Published var proxyPort: Int = 8080
+    @Published var proxyPort: Int = 3128
     /// 代理认证用户名
     @Published var proxyUsername: String = ""
     /// 代理认证密码
@@ -174,7 +174,7 @@ class AppSettings: ObservableObject {
         proxyEnabled = defaults.bool(forKey: proxyEnabledKey)
         proxyHost = defaults.string(forKey: proxyHostKey) ?? ""
         proxyPort = defaults.integer(forKey: proxyPortKey)
-        if proxyPort == 0 { proxyPort = 8080 } // 默认端口
+        if proxyPort == 0 { proxyPort = 3128 } // 默认端口
         proxyUsername = defaults.string(forKey: proxyUsernameKey) ?? ""
         proxyPassword = defaults.string(forKey: proxyPasswordKey) ?? ""
 
@@ -214,12 +214,12 @@ class AppSettings: ObservableObject {
         // 重置代理设置
         proxyEnabled = false
         proxyHost = ""
-        proxyPort = 8080
+        proxyPort = 3128
         proxyUsername = ""
         proxyPassword = ""
         defaults.set(false, forKey: proxyEnabledKey)
         defaults.set("", forKey: proxyHostKey)
-        defaults.set(8080, forKey: proxyPortKey)
+        defaults.set(3128, forKey: proxyPortKey)
         defaults.set("", forKey: proxyUsernameKey)
         defaults.set("", forKey: proxyPasswordKey)
 
