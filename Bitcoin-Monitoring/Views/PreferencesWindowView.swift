@@ -490,6 +490,7 @@ struct PreferencesWindowView: View {
                     NSCursor.arrow.set()
                 }
             }
+            .help("删除")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -564,17 +565,20 @@ struct PreferencesWindowView: View {
                     }
                 } label: {
                     if isValidatingCustomSymbol {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 6) {
                             ProgressView()
                                 .controlSize(.small)
                             Text("验证中...")
+                                .font(.system(size: 13, weight: .medium))
                         }
                     } else {
                         Text("添加")
+                            .font(.system(size: 14, weight: .medium))
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .controlSize(.small)
+                .controlSize(.regular)
+                .frame(width: 70, height: 32)
                 .disabled(!isCustomSymbolValid || isSaving || isValidatingCustomSymbol || appSettings.customCryptoSymbols.count >= 5)
             }
 
