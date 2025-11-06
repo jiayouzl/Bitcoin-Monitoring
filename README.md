@@ -12,7 +12,7 @@
 
 </div>
 
-一款 macOS 原生菜单栏应用，用于实时监控主流加密货币的价格，支持 BTC/ETH/BNB/SOL/DOGE 多种币种。基于 Swift 编写，致力于打造一款高性能、极简风格的应用APP，已经编译了`Intel`与`Apple Silicon`的通用应用，请至[releases](https://github.com/jiayouzl/Bitcoin-Monitoring/releases/latest)下载。
+一款 macOS 原生菜单栏应用，用于实时监控主流加密货币的价格，支持 BTC/ETH/BNB/SOL/DOGE 等主流币种，更支持用户自定义币种（如 ADA、SHIB、MATIC 等）。基于 Swift 编写，致力于打造一款高性能、极简风格的应用APP，已经编译了`Intel`与`Apple Silicon`的通用应用，请至[releases](https://github.com/jiayouzl/Bitcoin-Monitoring/releases/latest)下载。
 
 ## 📖 如在macOS下无法运行，请执行以下步骤：
 > 系统设置 → 隐私与安全性 → 安全性 → 已阻止“Bitcoin Monitoring.app”以保护Mac → 仍要打开
@@ -25,6 +25,9 @@
 
 ### 🚀 核心功能
 - **多币种支持**: 支持 BTC/ETH/BNB/SOL/DOGE 主流虚拟货币价格监控
+- **自定义币种**: 支持用户添加自定义币种（如 ADA、SHIB、MATIC 等），最多可添加5个自定义币种
+- **智能图标生成**: 为自定义币种自动生成基于首字母的彩色图标，确保视觉一致性
+- **币种验证**: 实时验证自定义币种格式，支持3-5个字符的币种符号
 - **实时价格显示**: 在菜单栏实时显示选中币种的 USDT 价格
 - **多种刷新机制**: 可选 5、10、30、60 秒自动获取最新价格数据
 - **智能错误重试**: 网络异常时自动重试，最多 3 次
@@ -36,6 +39,8 @@
 
 ### 🎨 用户体验
 - **中文界面**: 完整的中文用户界面
+- **自定义币种管理**: 直观的币种添加、删除和切换界面
+- **智能图标系统**: 自动生成的彩色币种图标，提供视觉一致性
 - **优雅动画**: 流畅的状态切换动画
 - **轻量级设计**: 最小化系统资源占用
 - **后台运行**: 不占用 Dock 空间，专注菜单栏
@@ -106,6 +111,8 @@ xcodebuild -project "Bitcoin Monitoring.xcodeproj" -scheme "Bitcoin Monitoring" 
 - **依赖注入**: 服务层分离和松耦合设计
 - **观察者模式**: 价格变化的响应式更新
 - **策略模式**: 可配置的刷新间隔选项
+- **协议统一**: `CryptoRepresentable` 协议统一默认和自定义币种接口
+- **工厂模式**: `CryptoIconGenerator` 自动生成币种图标
 
 ### UI 组件架构
 
@@ -114,6 +121,8 @@ xcodebuild -project "Bitcoin Monitoring.xcodeproj" -scheme "Bitcoin Monitoring" 
 - **响应式布局**: HStack + VStack 实现灵活的界面布局
 - **分组视图**: 自定义 `SettingsGroupView` 组件实现功能分组
 - **配置管理**: `AppSettings` 类统一管理用户偏好设置
+- **自定义币种组件**: 专门的币种管理界面，支持添加、删除和切换自定义币种
+- **图标缓存系统**: `CryptoIconGenerator` 实现图标生成和缓存机制，避免重复生成
 
 ### 并发处理
 
@@ -133,6 +142,39 @@ priceManager.$currentPrice
     }
 ```
 
+## 🔧 API 集成
+
+### 币安 API 端点
+应用使用币安公开 API 获取价格数据：
+```
+GET https://api.binance.com/api/v3/ticker/price?symbol={SYMBOL}
+```
+
+### 支持的交易对
+- **默认币种**: BTC/USDT, ETH/USDT, BNB/USDT, SOL/USDT, DOGE/USDT
+- **自定义币种**: 支持用户添加3-5个字符的任意币种（如ADA、SHIB、MATIC等）
+- **币种验证**: 自定义币种通过 `CustomCryptoSymbol.validateSymbol()` 进行格式验证
+- **图标生成**: 使用 `CryptoIconGenerator` 为自定义币种生成基于首字母的彩色图标
+
+### 错误处理
+- **自动重试机制**: 最多3次重试，递增延迟（1秒、2秒、4秒）
+- **网络异常处理**: 用户友好的错误提示和状态显示
+- **代理配置支持**: 完整的 HTTP/HTTPS 代理配置和连接测试
+
+## ⚙️ 配置管理
+
+### UserDefaults 键值
+- `BTCRefreshInterval`: 刷新间隔设置
+- `SelectedCryptoSymbol`: 选中的默认币种
+- `LaunchAtLogin`: 开机自启动
+- `CustomCryptoSymbols`: 自定义币种列表 (JSON数组)
+- `SelectedCustomSymbolIndex`: 当前选中的自定义币种索引
+- `UseCustomSymbol`: 是否使用自定义币种
+- `ProxyEnabled/ProxyHost/ProxyPort/ProxyUsername/ProxyPassword`: 代理设置（包括认证）
+
+### 配置持久化
+所有用户设置通过 `AppSettings` 类的 `@Published` 属性自动保存到 UserDefaults，应用重启后保持配置。使用 Combine 框架实现配置变化的实时响应。
+
 ## 🔧 故障排除
 
 ### 常见问题
@@ -142,11 +184,11 @@ priceManager.$currentPrice
 **问题**: 双击应用图标无反应
 **解决方案**:
 ```bash
-# 检查系统完整性
-xattr -d com.apple.quarantine "/Applications/Bitcoin Monitoring.app"
+# 指定该命令以启动APP
+sudo xattr -d com.apple.quarantine "/Applications/Bitcoin Monitoring.app"
 
 # 或者在系统偏好设置中允许应用运行
-# 系统偏好设置 → 安全性与隐私 → 通用
+系统设置 → 隐私与安全性 → 安全性 → 已阻止“Bitcoin Monitoring.app”以保护Mac → 仍要打开
 ```
 
 #### 2. 网络连接失败
@@ -168,6 +210,17 @@ curl "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
 3. 检查防火墙设置
 ```bash
 # 确保允许出站 HTTPS 连接
+```
+
+## 🔍 调试技巧
+
+### 网络调试
+```bash
+# 测试币安 API 连通性
+curl "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
+
+# 使用代理测试连接
+curl --proxy http://proxy-server:port "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
 ```
 
 ## 🤝 贡献指南

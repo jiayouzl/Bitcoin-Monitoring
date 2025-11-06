@@ -529,3 +529,5 @@ assets/cache/
 assets/.DS_Store
 
 CLAUDE.md
+.github
+sparkle_key
