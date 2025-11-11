@@ -450,91 +450,130 @@ class MenuBarManager: NSObject, ObservableObject {
     }
 
   
-    // 选择币种或复制价格（支持Option键切换功能）
+    // 选择币种或执行Option+点击功能
     @objc private func selectOrCopySymbol(_ sender: NSMenuItem) {
         guard let data = sender.representedObject as? [String: Any] else {
             print("❌ 无法获取菜单项数据")
             return
         }
 
-        // 检查是否按住了 Option 键，如果是则复制价格到剪贴板
+        // 检查是否按住了 Option 键
         let currentEvent = NSApp.currentEvent
         let isOptionPressed = currentEvent?.modifierFlags.contains(.option) ?? false
         let isCustom = data["isCustom"] as? Bool ?? false
 
-        if isOptionPressed {
-            // 复制价格到剪贴板
-            let price = data["price"] as? Double ?? 0.0
-            let displayName: String
+        // 获取币种信息
+        let displayName: String
+        let symbolForURL: String // 用于生成币安URL的币种符号
 
-            if isCustom {
-                guard let customSymbol = data["customSymbol"] as? CustomCryptoSymbol else {
-                    print("❌ 无法获取自定义币种数据")
-                    return
-                }
-                displayName = customSymbol.displayName
-            } else {
-                guard let symbol = data["symbol"] as? CryptoSymbol else {
-                    print("❌ 无法获取默认币种数据")
-                    return
-                }
-                displayName = symbol.displayName
+        if isCustom {
+            guard let customSymbol = data["customSymbol"] as? CustomCryptoSymbol else {
+                print("❌ 无法获取自定义币种数据")
+                return
             }
+            displayName = customSymbol.displayName
+            symbolForURL = customSymbol.symbol // 自定义币种的符号（如BTC, ETH）
+        } else {
+            guard let symbol = data["symbol"] as? CryptoSymbol else {
+                print("❌ 无法获取默认币种数据")
+                return
+            }
+            displayName = symbol.displayName
+            symbolForURL = symbol.displayName // 使用displayName获取币种基础符号（如BTC, ETH）
+        }
 
-            // 如果价格还没加载完成，先获取价格再复制
-            if price == 0.0 {
-                Task { @MainActor in
-                    print("🔄 价格未加载，正在获取 \(displayName) 价格...")
-                    var newPrice: Double?
+        if isOptionPressed {
+            // 根据用户设置的Option+点击功能执行相应操作
+            let optionAction = appSettings.optionClickAction
 
-                    if isCustom, let customSymbol = data["customSymbol"] as? CustomCryptoSymbol {
-                        newPrice = await self.priceManager.fetchCustomSymbolPrice(forApiSymbol: customSymbol.apiSymbol)
-                    } else if let symbol = data["symbol"] as? CryptoSymbol {
-                        newPrice = await self.priceManager.fetchSinglePrice(for: symbol)
-                    }
+            switch optionAction {
+            case .copyPrice:
+                // 复制价格到剪贴板
+                copyPriceToClipboard(symbol: displayName, data: data, isCustom: isCustom)
 
-                    if let priceToCopy = newPrice {
-                        let priceString = self.formatPriceWithCommas(priceToCopy)
-                        let pasteboard = NSPasteboard.general
-                        pasteboard.clearContents()
-                        pasteboard.setString("$\(priceString)", forType: .string)
-
-                        print("✅ 已复制 \(displayName) 价格到剪贴板: $\(priceString)")
-                    } else {
-                        print("❌ 无法获取 \(displayName) 价格")
-                    }
+            case .openSpotTrading:
+                // 打开币安现货交易页面
+                let spotSuccess = BinanceURLGenerator.openSpotTradingPage(for: symbolForURL)
+                if spotSuccess {
+                    print("✅ 已打开 \(displayName) 币安现货交易页面")
+                } else {
+                    print("❌ 打开 \(displayName) 币安现货交易页面失败")
                 }
-            } else {
-                let priceString = formatPriceWithCommas(price)
-                let pasteboard = NSPasteboard.general
-                pasteboard.clearContents()
-                pasteboard.setString("$\(priceString)", forType: .string)
 
-                print("✅ 已复制 \(displayName) 价格到剪贴板: $\(priceString)")
+            case .openFuturesTrading:
+                // 打开币安合约交易页面
+                let futuresSuccess = BinanceURLGenerator.openFuturesTradingPage(for: symbolForURL)
+                if futuresSuccess {
+                    print("✅ 已打开 \(displayName) 币安合约交易页面")
+                } else {
+                    print("❌ 打开 \(displayName) 币安合约交易页面失败")
+                }
             }
         } else {
-            // 选择该币种
-            if isCustom, let customSymbol = data["customSymbol"] as? CustomCryptoSymbol {
-                // 选择自定义币种 - 找到对应的索引并选择
-                if let index = appSettings.customCryptoSymbols.firstIndex(of: customSymbol) {
-                    appSettings.selectCustomCryptoSymbol(at: index)
-                    print("✅ 已切换到自定义币种: \(customSymbol.displayName)")
+            // 正常点击：选择该币种
+            selectSymbol(data: data, isCustom: isCustom, displayName: displayName)
+        }
+    }
+
+    // 复制价格到剪贴板的辅助方法
+    private func copyPriceToClipboard(symbol: String, data: [String: Any], isCustom: Bool) {
+        let price = data["price"] as? Double ?? 0.0
+
+        // 如果价格还没加载完成，先获取价格再复制
+        if price == 0.0 {
+            Task { @MainActor in
+                print("🔄 价格未加载，正在获取 \(symbol) 价格...")
+                var newPrice: Double?
+
+                if isCustom, let customSymbol = data["customSymbol"] as? CustomCryptoSymbol {
+                    newPrice = await self.priceManager.fetchCustomSymbolPrice(forApiSymbol: customSymbol.apiSymbol)
+                } else if let symbol = data["symbol"] as? CryptoSymbol {
+                    newPrice = await self.priceManager.fetchSinglePrice(for: symbol)
                 }
 
-                // 立即更新价格管理器和UI
-                self.priceManager.updateCryptoSymbolSettings()
-                // 使用0.0价格强制更新显示状态，确保图标和文字都正确更新
-                self.updateMenuBarTitle(price: 0.0)
-            } else if let symbol = data["symbol"] as? CryptoSymbol {
-                // 选择默认币种
-                appSettings.saveSelectedSymbol(symbol)
-                print("✅ 已切换到默认币种: \(symbol.displayName)")
+                if let priceToCopy = newPrice {
+                    let priceString = self.formatPriceWithCommas(priceToCopy)
+                    let pasteboard = NSPasteboard.general
+                    pasteboard.clearContents()
+                    pasteboard.setString("$\(priceString)", forType: .string)
 
-                // 立即更新价格管理器和UI
-                self.priceManager.updateCryptoSymbolSettings()
-                // 使用0.0价格强制更新显示状态，确保图标和文字都正确更新
-                self.updateMenuBarTitle(price: 0.0)
+                    print("✅ 已复制 \(symbol) 价格到剪贴板: $\(priceString)")
+                } else {
+                    print("❌ 无法获取 \(symbol) 价格")
+                }
             }
+        } else {
+            let priceString = formatPriceWithCommas(price)
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.setString("$\(priceString)", forType: .string)
+
+            print("✅ 已复制 \(symbol) 价格到剪贴板: $\(priceString)")
+        }
+    }
+
+    // 选择币种的辅助方法
+    private func selectSymbol(data: [String: Any], isCustom: Bool, displayName: String) {
+        if isCustom, let customSymbol = data["customSymbol"] as? CustomCryptoSymbol {
+            // 选择自定义币种 - 找到对应的索引并选择
+            if let index = appSettings.customCryptoSymbols.firstIndex(of: customSymbol) {
+                appSettings.selectCustomCryptoSymbol(at: index)
+                print("✅ 已切换到自定义币种: \(displayName)")
+            }
+
+            // 立即更新价格管理器和UI
+            self.priceManager.updateCryptoSymbolSettings()
+            // 使用0.0价格强制更新显示状态，确保图标和文字都正确更新
+            self.updateMenuBarTitle(price: 0.0)
+        } else if let symbol = data["symbol"] as? CryptoSymbol {
+            // 选择默认币种
+            appSettings.saveSelectedSymbol(symbol)
+            print("✅ 已切换到默认币种: \(displayName)")
+
+            // 立即更新价格管理器和UI
+            self.priceManager.updateCryptoSymbolSettings()
+            // 使用0.0价格强制更新显示状态，确保图标和文字都正确更新
+            self.updateMenuBarTitle(price: 0.0)
         }
     }
 

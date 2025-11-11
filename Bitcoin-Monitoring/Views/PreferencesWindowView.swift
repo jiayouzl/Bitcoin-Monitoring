@@ -53,6 +53,7 @@ struct PreferencesWindowView: View {
     @State private var tempProxyUsername: String
     @State private var tempProxyPassword: String
     @State private var tempLaunchAtLogin: Bool
+    @State private var tempOptionClickAction: OptionClickAction
 
     // 验证状态
     @State private var showingValidationError = false
@@ -101,6 +102,7 @@ struct PreferencesWindowView: View {
         self._tempProxyUsername = State(initialValue: appSettings.proxyUsername)
         self._tempProxyPassword = State(initialValue: appSettings.proxyPassword)
         self._tempLaunchAtLogin = State(initialValue: appSettings.launchAtLogin)
+        self._tempOptionClickAction = State(initialValue: appSettings.optionClickAction)
     }
 
     var body: some View {
@@ -226,11 +228,12 @@ struct PreferencesWindowView: View {
         }
     }
 
-    // 通用设置视图（刷新间隔 + 启动设置）
+    // 通用设置视图（刷新间隔 + 启动设置 + Option+点击功能）
     private var generalSettingsView: some View {
         VStack(spacing: 24) {
             refreshSettingsView
             launchSettingsView
+            optionClickSettingsView
         }
     }
 
@@ -277,6 +280,37 @@ struct PreferencesWindowView: View {
                         .labelsHidden()
                         .toggleStyle(.switch)
                         .controlSize(.mini)
+                }
+            }
+        }
+    }
+
+    // Option+点击功能设置视图
+    private var optionClickSettingsView: some View {
+        SettingsGroupView(title: "Option+点击功能", icon: "cursorarrow.click.2") {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("按住Option+左键功能")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+
+                        Text("设置按住Option键点击币种时执行的操作")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    // 使用Picker让用户选择操作类型
+                    Picker("Option+点击操作", selection: $tempOptionClickAction) {
+                        ForEach(OptionClickAction.allCases, id: \.self) { action in
+                            Text(action.displayName).tag(action)
+                        }
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                    .frame(width: 180)
+                    .labelsHidden()
                 }
             }
         }
@@ -679,6 +713,12 @@ struct PreferencesWindowView: View {
         if tempLaunchAtLogin != appSettings.launchAtLogin {
             appSettings.toggleLoginItem(enabled: tempLaunchAtLogin)
             print("✅ [Preferences] 已设置开机自启动: \(tempLaunchAtLogin)")
+        }
+
+        // 保存Option+点击功能设置
+        if tempOptionClickAction != appSettings.optionClickAction {
+            appSettings.saveOptionClickAction(tempOptionClickAction)
+            print("✅ [Preferences] 已保存Option+点击功能: \(tempOptionClickAction.displayName)")
         }
 
         // 保存代理设置

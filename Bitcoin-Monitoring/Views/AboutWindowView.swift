@@ -147,6 +147,10 @@ struct AboutWindowView: View {
 
                     FeatureRow(icon: "exclamationmark.triangle.fill", title: "智能重试机制", description: "网络错误自动恢复")
 
+                    FeatureRow(icon: "network", title: "支持代理服务器", description: "适用于受限网络环境")
+
+                    FeatureRow(icon: "bell.fill", title: "更多功能", description: "等待你的发掘！")
+
                 }
             }
 
@@ -197,7 +201,7 @@ struct AboutWindowView: View {
             }
         }
         .padding(24)
-        .frame(width: 420, height: 500)
+        .frame(width: 420, height: 590) // 设置固定高度以适应内容
         .alert("检测更新", isPresented: $showingUpdateAlert) {
             Button("确定", role: .cancel) {
                 // 如果消息中包含"发现新版本"，则打开发布页面并关闭窗口

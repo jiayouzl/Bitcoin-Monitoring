@@ -9,6 +9,26 @@ import Foundation
 import Combine
 import ServiceManagement
 
+/// Option+点击操作类型枚举
+/// 定义用户按住Option键点击币种时可以执行的操作
+enum OptionClickAction: String, CaseIterable, Codable {
+    case copyPrice = "copyPrice"
+    case openSpotTrading = "openSpotTrading"
+    case openFuturesTrading = "openFuturesTrading"
+
+    /// 获取操作的显示名称
+    var displayName: String {
+        switch self {
+        case .copyPrice:
+            return "复制价格"
+        case .openSpotTrading:
+            return "Binance现货交易"
+        case .openFuturesTrading:
+            return "Binance合约交易"
+        }
+    }
+}
+
 /// 应用配置管理类
 /// 负责管理用户的刷新间隔设置和其他应用配置
 @MainActor
@@ -45,6 +65,11 @@ class AppSettings: ObservableObject {
     /// 代理认证密码
     @Published var proxyPassword: String = ""
 
+    // MARK: - Option+点击功能设置
+
+    /// Option+左键点击的操作类型
+    @Published var optionClickAction: OptionClickAction = .copyPrice
+
     // MARK: - Private Properties
 
     private let defaults = UserDefaults.standard
@@ -65,6 +90,10 @@ class AppSettings: ObservableObject {
     private let proxyPortKey = "ProxyPort"
     private let proxyUsernameKey = "ProxyUsername"
     private let proxyPasswordKey = "ProxyPassword"
+
+    // MARK: - Option+点击功能配置键值
+
+    private let optionClickActionKey = "OptionClickAction"
 
     // MARK: - Initialization
 
@@ -178,6 +207,20 @@ class AppSettings: ObservableObject {
         proxyUsername = defaults.string(forKey: proxyUsernameKey) ?? ""
         proxyPassword = defaults.string(forKey: proxyPasswordKey) ?? ""
 
+        // 加载Option+点击功能设置
+        if let optionClickActionRaw = defaults.string(forKey: optionClickActionKey),
+           let savedAction = OptionClickAction(rawValue: optionClickActionRaw) {
+            optionClickAction = savedAction
+            #if DEBUG
+            print("🔧 [AppSettings] ✅ 已加载Option+点击功能: \(savedAction.displayName)")
+            #endif
+        } else {
+            optionClickAction = .copyPrice
+            #if DEBUG
+            print("🔧 [AppSettings] ❌ 未找到有效Option+点击功能配置，使用默认值: \(optionClickAction.displayName)")
+            #endif
+        }
+
         // 检查实际的自启动状态并同步
         checkAndSyncLaunchAtLoginStatus()
 
@@ -185,7 +228,7 @@ class AppSettings: ObservableObject {
         let proxyInfo = proxyEnabled ? "\(proxyHost):\(proxyPort)" : "未启用"
         let authInfo = proxyEnabled && !proxyUsername.isEmpty ? " (认证: \(proxyUsername))" : ""
         let customInfo = useCustomSymbol && !customCryptoSymbols.isEmpty ? " (自定义: \(customCryptoSymbols.count)个)" : ""
-        print("🔧 [AppSettings] 配置加载完成 - 刷新间隔: \(refreshInterval.displayText), 币种: \(getCurrentActiveDisplayName())\(customInfo), 开机自启动: \(launchAtLogin), 代理: \(proxyInfo)\(authInfo)")
+        print("🔧 [AppSettings] 配置加载完成 - 刷新间隔: \(refreshInterval.displayText), 币种: \(getCurrentActiveDisplayName())\(customInfo), 开机自启动: \(launchAtLogin), 代理: \(proxyInfo)\(authInfo), Option+点击: \(optionClickAction.displayName)")
         #endif
     }
 
@@ -223,8 +266,12 @@ class AppSettings: ObservableObject {
         defaults.set("", forKey: proxyUsernameKey)
         defaults.set("", forKey: proxyPasswordKey)
 
+        // 重置Option+点击功能设置
+        optionClickAction = .copyPrice
+        defaults.set(optionClickAction.rawValue, forKey: optionClickActionKey)
+
         #if DEBUG
-        print("🔧 [AppSettings] 重置完成 - 刷新间隔: \(refreshInterval.displayText), 币种: \(selectedSymbol.displayName), 自定义币种: 已清除, 代理: 已重置")
+        print("🔧 [AppSettings] 重置完成 - 刷新间隔: \(refreshInterval.displayText), 币种: \(selectedSymbol.displayName), 自定义币种: 已清除, 代理: 已重置, Option+点击: \(optionClickAction.displayName)")
         #endif
 
         // 重置开机自启动设置
@@ -342,6 +389,19 @@ class AppSettings: ObservableObject {
         }
 
         return false
+    }
+
+    // MARK: - Option+点击功能相关方法
+
+    /// 保存Option+点击功能设置
+    /// - Parameter action: 要保存的操作类型
+    func saveOptionClickAction(_ action: OptionClickAction) {
+        optionClickAction = action
+        defaults.set(action.rawValue, forKey: optionClickActionKey)
+
+        #if DEBUG
+        print("🔧 [AppSettings] 保存Option+点击功能设置: \(action.displayName)")
+        #endif
     }
 
     // MARK: - 开机自启动相关方法

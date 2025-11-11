@@ -36,6 +36,7 @@
 - **价格复制功能**: 支持一键复制当前价格到剪贴板
 - **配置持久化**: 用户设置自动保存，重启后保持配置
 - **开机自启动**: 可选是否开机自动启动APP
+- **代理支持**: 支持 HTTP/HTTPS 代理配置，支持代理认证
 
 ### 🎨 用户体验
 - **中文界面**: 完整的中文用户界面
@@ -67,7 +68,7 @@
 - **部署目标**: macOS 13.1
 
 ### 网络要求
-- 需要稳定的互联网连接
+- 需要稳定的互联网连接，国内用户建议使用科学上网工具 或 设置代理服务器。
 - 访问币安 API (`https://api.binance.com`) 的网络权限
 
 ## 🚀 快速开始
@@ -124,24 +125,6 @@ xcodebuild -project "Bitcoin Monitoring.xcodeproj" -scheme "Bitcoin Monitoring" 
 - **自定义币种组件**: 专门的币种管理界面，支持添加、删除和切换自定义币种
 - **图标缓存系统**: `CryptoIconGenerator` 实现图标生成和缓存机制，避免重复生成
 
-### 并发处理
-
-```swift
-// 主线程 UI 更新
-@MainActor
-class BTCMenuBarApp: ObservableObject
-
-// 异步网络请求
-func fetchPrice() async throws -> Double
-
-// Combine 响应式流
-priceManager.$currentPrice
-    .receive(on: DispatchQueue.main)
-    .sink { [weak self] price in
-        self?.updateMenuBarTitle(price: price)
-    }
-```
-
 ## 🔧 API 集成
 
 ### 币安 API 端点
@@ -161,7 +144,7 @@ GET https://api.binance.com/api/v3/ticker/price?symbol={SYMBOL}
 - **网络异常处理**: 用户友好的错误提示和状态显示
 - **代理配置支持**: 完整的 HTTP/HTTPS 代理配置和连接测试
 
-## ⚙️ 配置管理
+## ⚙️ 配置管理（持久化配置）
 
 ### UserDefaults 键值
 - `BTCRefreshInterval`: 刷新间隔设置
@@ -171,9 +154,7 @@ GET https://api.binance.com/api/v3/ticker/price?symbol={SYMBOL}
 - `SelectedCustomSymbolIndex`: 当前选中的自定义币种索引
 - `UseCustomSymbol`: 是否使用自定义币种
 - `ProxyEnabled/ProxyHost/ProxyPort/ProxyUsername/ProxyPassword`: 代理设置（包括认证）
-
-### 配置持久化
-所有用户设置通过 `AppSettings` 类的 `@Published` 属性自动保存到 UserDefaults，应用重启后保持配置。使用 Combine 框架实现配置变化的实时响应。
+- `OptionClickAction`: 选项点击操作设置
 
 ## 🔧 故障排除
 
@@ -184,10 +165,12 @@ GET https://api.binance.com/api/v3/ticker/price?symbol={SYMBOL}
 **问题**: 双击应用图标无反应
 **解决方案**:
 ```bash
-# 指定该命令以启动APP
+# 执行该命令以启动APP
 sudo xattr -d com.apple.quarantine "/Applications/Bitcoin Monitoring.app"
 
-# 或者在系统偏好设置中允许应用运行
+# 或者
+
+# 系统偏好设置中允许应用运行
 系统设置 → 隐私与安全性 → 安全性 → 已阻止“Bitcoin Monitoring.app”以保护Mac → 仍要打开
 ```
 
