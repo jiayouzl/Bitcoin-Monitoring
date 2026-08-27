@@ -556,7 +556,7 @@ struct PreferencesWindowView: View {
                 .font(.subheadline)
                 .foregroundColor(.primary)
 
-            Text("输入3-5个大写字母的币种符号（如 ENA、TRX、TRUMP）")
+            Text("输入2-10个大写字母或数字的币种符号（如 OP、1INCH、1000SATS）")
                 .font(.caption)
                 .foregroundColor(.secondary)
 
@@ -582,8 +582,10 @@ struct PreferencesWindowView: View {
                 TextField("例如: TRX", text: Binding(
                     get: { customSymbolInput },
                     set: { newValue in
-                        let filteredValue = newValue.filter { $0.isLetter }.uppercased()
-                        customSymbolInput = String(filteredValue.prefix(5))
+                        let filteredValue = newValue.uppercased().filter {
+                            ("A"..."Z").contains($0) || ("0"..."9").contains($0)
+                        }
+                        customSymbolInput = String(filteredValue.prefix(10))
 
                         let validation = CustomCryptoSymbol.isValidSymbol(customSymbolInput)
                         isCustomSymbolValid = validation.isValid

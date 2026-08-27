@@ -9,13 +9,16 @@ import Foundation
 import AppKit
 
 /// 自定义加密货币数据模型
-/// 支持用户定义的3-5字符币种符号，使用统一的BTC图标
+/// 支持用户定义的2-10字符币种符号，使用统一的BTC图标
 struct CustomCryptoSymbol: Codable, Equatable, Hashable {
+    private static let minimumSymbolLength = 2
+    private static let maximumSymbolLength = 10
+
     /// 币种符号（如 ADA、DOGE、SHIB）
     let symbol: String
 
     /// 创建自定义币种实例
-    /// - Parameter symbol: 币种符号，3-5个大写字母
+    /// - Parameter symbol: 币种符号，2-10个大写字母或数字
     init(symbol: String) throws {
         let trimmedSymbol = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
 
@@ -40,13 +43,13 @@ struct CustomCryptoSymbol: Codable, Equatable, Hashable {
     /// - Parameter symbol: 待验证的币种符号
     /// - Throws: ValidationError 如果格式不符合要求
     private static func validateSymbol(_ symbol: String) throws {
-        // 验证长度：3-5个字符
-        guard symbol.count >= 3, symbol.count <= 5 else {
+        // 验证长度：2-10个字符
+        guard symbol.count >= minimumSymbolLength, symbol.count <= maximumSymbolLength else {
             throw ValidationError.invalidLength
         }
 
-        // 验证格式：只包含大写字母
-        guard symbol.allSatisfy({ $0.isLetter && $0.isUppercase }) else {
+        // 验证格式：只包含 ASCII 大写字母或数字
+        guard symbol.allSatisfy(isAllowedSymbolCharacter) else {
             throw ValidationError.invalidFormat
         }
 
@@ -64,17 +67,15 @@ struct CustomCryptoSymbol: Codable, Equatable, Hashable {
         let trimmedSymbol = symbol.trimmingCharacters(in: .whitespacesAndNewlines)
 
         // 检查长度
-        guard trimmedSymbol.count >= 3, trimmedSymbol.count <= 5 else {
-            return (false, "币种符号需要3-5个大写字母")
+        guard trimmedSymbol.count >= minimumSymbolLength, trimmedSymbol.count <= maximumSymbolLength else {
+            return (false, "币种符号需要2-10个字符")
         }
 
         // 检查格式
-        guard trimmedSymbol.allSatisfy({ $0.isLetter }) else {
-            return (false, "币种符号只能包含字母")
-        }
-
-        // 转换为大写进行验证
         let uppercasedSymbol = trimmedSymbol.uppercased()
+        guard uppercasedSymbol.allSatisfy(isAllowedSymbolCharacter) else {
+            return (false, "币种符号只能包含大写字母或数字")
+        }
 
         // 检查是否与默认币种重复
         let defaultSymbols = CryptoSymbol.allCases.map { $0.displayName.uppercased() }
@@ -83,6 +84,10 @@ struct CustomCryptoSymbol: Codable, Equatable, Hashable {
         }
 
         return (true, nil)
+    }
+
+    private static func isAllowedSymbolCharacter(_ character: Character) -> Bool {
+        ("A"..."Z").contains(character) || ("0"..."9").contains(character)
     }
 
     /// 自定义币种验证错误类型
@@ -94,9 +99,9 @@ struct CustomCryptoSymbol: Codable, Equatable, Hashable {
         var errorDescription: String? {
             switch self {
             case .invalidLength:
-                return "币种符号需要3-5个大写字母"
+                return "币种符号需要2-10个字符"
             case .invalidFormat:
-                return "币种符号只能包含大写字母"
+                return "币种符号只能包含大写字母或数字"
             case .duplicateWithDefault:
                 return "该币种已在默认列表中"
             }
