@@ -246,7 +246,7 @@ struct PreferencesWindowView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
 
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     ForEach(RefreshInterval.allCases, id: \.self) { interval in
                         IntervalSelectionButton(
                             interval: interval,
@@ -986,8 +986,10 @@ struct IntervalSelectionButton: View {
             Text(interval.displayText)
                 .font(.system(size: 13))
                 .fontWeight(isSelected ? .medium : .regular)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
 
-            Spacer()
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
