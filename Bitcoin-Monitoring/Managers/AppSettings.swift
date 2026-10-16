@@ -101,6 +101,15 @@ class AppSettings: ObservableObject {
         loadSettings()
     }
 
+    /// 创建仅供代理测试使用的内存配置，不加载或写入正式设置。
+    init(proxyTestHost: String, port: Int, username: String, password: String) {
+        proxyEnabled = true
+        proxyHost = proxyTestHost.trimmingCharacters(in: .whitespacesAndNewlines)
+        proxyPort = port
+        proxyUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        proxyPassword = password
+    }
+
     // MARK: - Configuration Methods
 
     /// 从UserDefaults加载保存的配置

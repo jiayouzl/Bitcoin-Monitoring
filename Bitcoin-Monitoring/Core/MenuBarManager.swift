@@ -250,6 +250,10 @@ class MenuBarManager: NSObject, ObservableObject {
             if let icon = symbolImage(for: symbol) {
                 icon.size = NSSize(width: 16, height: 16)
                 item.image = icon
+                // macOS 27 默认可能隐藏菜单图标，显式请求显示币种图标。
+                if #available(macOS 27.0, *) {
+                    item.preferredImageVisibility = .visible
+                }
             }
             item.isEnabled = true // 立即启用菜单项，允许用户交互
             item.representedObject = ["symbol": symbol, "price": 0.0, "isCustom": false]
@@ -267,6 +271,10 @@ class MenuBarManager: NSObject, ObservableObject {
             if let icon = customSymbolImage(for: customSymbol) {
                 icon.size = NSSize(width: 16, height: 16)
                 item.image = icon
+                // macOS 27 默认可能隐藏菜单图标，显式请求显示币种图标。
+                if #available(macOS 27.0, *) {
+                    item.preferredImageVisibility = .visible
+                }
             }
             item.isEnabled = true
             item.representedObject = ["customSymbol": customSymbol, "price": 0.0, "isCustom": true]

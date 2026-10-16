@@ -11,12 +11,13 @@ import SwiftUI
  * 偏好设置窗口管理器
  * 负责创建和管理偏好设置窗口的显示
  */
-class PreferencesWindowManager: ObservableObject {
+class PreferencesWindowManager: NSObject, ObservableObject, NSWindowDelegate {
     private var preferencesWindow: NSWindow?
     private var appSettings: AppSettings
 
     init(appSettings: AppSettings) {
         self.appSettings = appSettings
+        super.init()
     }
 
     /**
@@ -67,6 +68,7 @@ class PreferencesWindowManager: ObservableObject {
         centerWindowInScreen(window)
 
         window.isReleasedWhenClosed = false
+        window.delegate = self
         window.titlebarAppearsTransparent = false
         window.titleVisibility = .visible
 
@@ -97,6 +99,12 @@ class PreferencesWindowManager: ObservableObject {
      */
     private func closePreferencesWindow() {
         preferencesWindow?.close()
+    }
+
+    // 统一处理关闭按钮、取消和保存后的关闭，重新打开时从正式设置创建草稿。
+    func windowWillClose(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow,
+              window === preferencesWindow else { return }
         preferencesWindow = nil
         print("✅ 已关闭偏好设置窗口")
     }

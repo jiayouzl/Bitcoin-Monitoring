@@ -764,17 +764,16 @@ struct PreferencesWindowView: View {
 
         isTestingProxy = true
 
+        // 在开始测试时固定草稿，仅在内存中使用，不调用正式配置的保存方法。
+        let tempAppSettings = AppSettings(
+            proxyTestHost: tempProxyHost,
+            port: Int(tempProxyPort) ?? 3128,
+            username: tempProxyUsername,
+            password: tempProxyPassword
+        )
+
         Task {
             // 创建临时价格服务实例进行测试
-            let tempAppSettings = AppSettings()
-            tempAppSettings.saveProxySettings(
-                enabled: true,
-                host: tempProxyHost.trimmingCharacters(in: .whitespacesAndNewlines),
-                port: Int(tempProxyPort) ?? 3128,
-                username: tempProxyUsername.trimmingCharacters(in: .whitespacesAndNewlines),
-                password: tempProxyPassword
-            )
-
             let tempPriceService = PriceService(appSettings: tempAppSettings)
             let success = await tempPriceService.testProxyConnection()
 
